@@ -13,6 +13,12 @@ logger_cagada = None
 # nivel_log = logging.ERROR
 nivel_log = logging.DEBUG
 
+def caca_ordena_dick_llave(dick):
+    return sorted(dick.keys())
+
+def caca_ordena_dick_valor(dick):
+    return sorted(dick.items(), key=lambda k, v: (v, k))
+
 def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
     tamano_patron_referencia = 0
     tamano_patron_encontrar = 0
@@ -23,7 +29,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
 
     logger_cagada.debug("patron ref %s patron enc %s" % (patron_referencia, patron_encontrar))
     
-    assert(tamano_patron_referencia > tamano_patron_encontrar)
+    assert(tamano_patron_referencia >= tamano_patron_encontrar)
 
     
     for pos_pat_ref in range(tamano_patron_referencia):
@@ -45,6 +51,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
             
             if(patron_referencia[pos_pat_ref_act] == patron_encontrar[pos_pat_enc]):
                 posiciones[pos_pat_ref_inicio] += 1
+                if(posiciones[pos_pat_ref_inicio]==tamano_patron_encontrar):
+                    matches_completos[pos_pat_ref_inicio] = True
                 logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones[pos_pat_ref_inicio]))
             else:
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
@@ -58,6 +66,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
         if(patron_referencia[pos_pat_ref] == patron_encontrar[0]):
             posiciones[pos_pat_ref] = 1
             logger_cagada.debug("se inicia cagada %u(%u) vs %u(%u)" % (patron_referencia[pos_pat_ref], pos_pat_ref, patron_encontrar[0], 0))
+    
+    logger_cagada.debug("los matches completos son %s" % matches_completos)
     assert(len(matches_completos) == 1)
     
 def fibonazi_genera_palabras_patron(palabras):
@@ -97,10 +107,43 @@ def fibonazi_genera_sequencia_repeticiones(secuencia, generar_grande):
             num_actual += 1
         secuencia.append(num_actual)
 
+def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base):
+    tam_patron = 0
+    idx_patron_tamano_coincide = 0
+    patron_tamano_coincide = []
+    patron_componente_1 = []
+    patron_componente_2 = []
+    posiciones_patron = {}
+    posiciones_patron_llave = {}
+    posiciones_patron_valor = {}
+    
+    tam_patron = len(patron_referencia)
+    
+    for idx_patron, patron_base in enumerate(patrones_base):
+        if(len(patron_base) >= tam_patron):
+            idx_patron_tamano_coincide = idx_patron
+            patron_tamano_coincide = patron_base
+            break
+        
+    assert(len(patron_tamano_coincide) > 0)
+    
+    patron_componente_1 = patron_base[idx_patron_tamano_coincide - 1]
+    patron_componente_2 = patron_base[idx_patron_tamano_coincide - 2]
+    
+    fibonazi_compara_patrones(patron_referencia, patron_tamano_coincide, posiciones_patron)
+    
+    logger_cagada.debug("posiciones originales %s" % posiciones_patron)
+    
+    posiciones_patron_llave = caca_ordena_dick_llave(posiciones_patron)
+    posiciones_patron_valor = caca_ordena_dick_valor(posiciones_patron)
+    
+    logger_cagada.debug("posiciones llave %s" % posiciones_patron_llave)
+    logger_cagada.debug("posiciones valor%s" % posiciones_patron_valor)
+
 if __name__ == '__main__':
     palabras_patron = []
-    secuencia_grande=[]
-    secuencia_no_grande=[]
+    secuencia_grande = []
+    secuencia_no_grande = []
     patron_referencia = bitarray("1011010110110")
     patron_encontrar = bitarray("110101101")
 #    patron_referencia = bitarray("1011010110110")
@@ -114,7 +157,7 @@ if __name__ == '__main__':
     logger_cagada = logging.getLogger("asa")
     logger_cagada.setLevel(nivel_log)
 
-    fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones)
+#    fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones)
     logger_cagada.debug("luna llena mi alma %s" % posiciones)
 
     fibonazi_genera_palabras_patron(palabras_patron)
@@ -125,3 +168,5 @@ if __name__ == '__main__':
 #    logger_cagada.debug("la seq grande %s"%secuencia_grande)
     fibonazi_genera_sequencia_repeticiones(secuencia_no_grande, False)
 #    logger_cagada.debug("la seq no grande %s"%secuencia_no_grande)
+
+fibonazi_encuentra_primera_aparicion_patron(patron_referencia, palabras_patron)
