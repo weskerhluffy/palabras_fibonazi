@@ -14,10 +14,10 @@ logger_cagada = None
 nivel_log = logging.DEBUG
 
 def caca_ordena_dick_llave(dick):
-    return sorted(dick.keys())
+    return sorted(dick.items(), key=lambda cosa: cosa[0])
 
 def caca_ordena_dick_valor(dick):
-    return sorted(dick.items(), key=lambda k, v: (v, k))
+    return sorted(dick.items(), key=lambda cosa: cosa[1])
 
 def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
     tamano_patron_referencia = 0
@@ -27,10 +27,9 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
     tamano_patron_referencia = len(patron_referencia)
     tamano_patron_encontrar = len(patron_encontrar)
 
-    logger_cagada.debug("patron ref %s patron enc %s" % (patron_referencia, patron_encontrar))
+    logger_cagada.debug("patron ref %s patron enc %s" % (bitarray(list(reversed(patron_referencia))), bitarray(list(reversed(patron_encontrar)))))
     
-    assert(tamano_patron_referencia >= tamano_patron_encontrar)
-
+#    assert(tamano_patron_referencia >= tamano_patron_encontrar)
     
     for pos_pat_ref in range(tamano_patron_referencia):
         posiciones_a_borrar = array.array("I")
@@ -51,7 +50,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
             
             if(patron_referencia[pos_pat_ref_act] == patron_encontrar[pos_pat_enc]):
                 posiciones[pos_pat_ref_inicio] += 1
-                if(posiciones[pos_pat_ref_inicio]==tamano_patron_encontrar):
+                if(posiciones[pos_pat_ref_inicio] == tamano_patron_encontrar):
+                    logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u" % (pos_pat_ref_inicio))
                     matches_completos[pos_pat_ref_inicio] = True
                 logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones[pos_pat_ref_inicio]))
             else:
@@ -67,8 +67,9 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones):
             posiciones[pos_pat_ref] = 1
             logger_cagada.debug("se inicia cagada %u(%u) vs %u(%u)" % (patron_referencia[pos_pat_ref], pos_pat_ref, patron_encontrar[0], 0))
     
+    logger_cagada.debug("las posiciones finales son %s" % posiciones)
     logger_cagada.debug("los matches completos son %s" % matches_completos)
-    assert(len(matches_completos) == 1)
+    assert(len(matches_completos) == 1 or len(matches_completos) == 0)
     
 def fibonazi_genera_palabras_patron(palabras):
     tamano_palabra_actual = 0
@@ -110,35 +111,73 @@ def fibonazi_genera_sequencia_repeticiones(secuencia, generar_grande):
 def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base):
     tam_patron = 0
     idx_patron_tamano_coincide = 0
+    tam_match_maximo_patron_1 = 0
+    inicio_match_maximo_patron_1 = 0
+    fin_match_maximo_patron_1 = 0
+    tam_componente_2 = 0
+    idx_ocurencia_patron = -1
     patron_tamano_coincide = []
     patron_componente_1 = []
     patron_componente_2 = []
+    patron_componente_2_1 = []
+    posiciones_componente_1_llave = []
+    posiciones_componente_1_valor = []
+    posiciones_patron_base = []
     posiciones_patron = {}
-    posiciones_patron_llave = {}
-    posiciones_patron_valor = {}
     
     tam_patron = len(patron_referencia)
     
     for idx_patron, patron_base in enumerate(patrones_base):
+        logger_cagada.debug("comaprando patron based tam %u con %u" % (len(patron_base), tam_patron))
         if(len(patron_base) >= tam_patron):
             idx_patron_tamano_coincide = idx_patron
             patron_tamano_coincide = patron_base
             break
         
     assert(len(patron_tamano_coincide) > 0)
+    assert(len(patron_tamano_coincide) >= len(patron_referencia))
     
-    patron_componente_1 = patron_base[idx_patron_tamano_coincide - 1]
-    patron_componente_2 = patron_base[idx_patron_tamano_coincide - 2]
+    patron_componente_1 = patrones_base[idx_patron_tamano_coincide - 1]
+    patron_componente_2 = patrones_base[idx_patron_tamano_coincide - 2]
+    patron_componente_2_1 = patrones_base[idx_patron_tamano_coincide - 3]
+    tam_componente_2 = len(patron_componente_2)
     
-    fibonazi_compara_patrones(patron_referencia, patron_tamano_coincide, posiciones_patron)
+
+    fibonazi_compara_patrones(patron_referencia, patron_componente_1, posiciones_patron)
     
     logger_cagada.debug("posiciones originales %s" % posiciones_patron)
     
-    posiciones_patron_llave = caca_ordena_dick_llave(posiciones_patron)
-    posiciones_patron_valor = caca_ordena_dick_valor(posiciones_patron)
+    posiciones_componente_1_llave = caca_ordena_dick_llave(posiciones_patron)
+    posiciones_componente_1_valor = caca_ordena_dick_valor(posiciones_patron)
+    posiciones_componente_1_valor.reverse()
     
-    logger_cagada.debug("posiciones llave %s" % posiciones_patron_llave)
-    logger_cagada.debug("posiciones valor%s" % posiciones_patron_valor)
+    logger_cagada.debug("posiciones llave %s" % posiciones_componente_1_llave)
+    logger_cagada.debug("posiciones valor %s" % posiciones_componente_1_valor)
+
+    tam_match_maximo_patron_1 = posiciones_componente_1_valor[0][1]
+    inicio_match_maximo_patron_1 = posiciones_componente_1_valor[0][0]
+    fin_match_maximo_patron_1 = inicio_match_maximo_patron_1 + tam_match_maximo_patron_1
+
+    logger_cagada.debug("el tam match max %u alcanzado en %u con fin en %u" % (tam_match_maximo_patron_1, inicio_match_maximo_patron_1, fin_match_maximo_patron_1))
+    logger_cagada.debug("el tam comp 2  %u" % (tam_componente_2))
+
+#    if(len(patron_tamano_coincide) == len(patron_referencia) and tam_match_maximo_patron_1 == len(patron_componente_1) and inicio_match_maximo_patron_1 == tam_componente_2):
+#        idx_ocurencia_patron = idx_patron_tamano_coincide
+#        logger_cagada.debug("patron encontrado en pos %u del mismo tam" % (inicio_match_maximo_patron_1))
+
+#    if(idx_ocurencia_patron == -1):
+    logger_cagada.debug("el tam match max %u" % tam_match_maximo_patron_1)
+    if(tam_match_maximo_patron_1 >= len(patron_componente_2_1) + 1):
+        logger_cagada.debug("patron encontrado en pos %u" % idx_patron_tamano_coincide)
+    else:
+        if(tam_match_maximo_patron_1 >= len(patron_componente_2)):
+            fibonazi_compara_patrones(patron_referencia, patron_tamano_coincide, posiciones_patron)
+            logger_cagada.debug("patron encontrado en pos 1 %u" % (idx_patron_tamano_coincide + 1))
+        else:
+            logger_cagada.debug("patron encontrado en pos 2 %u, tam patron comp 2 %u" % (idx_patron_tamano_coincide + 2, len(patron_componente_2)))
+	
+
+
 
 if __name__ == '__main__':
     palabras_patron = []
@@ -146,6 +185,7 @@ if __name__ == '__main__':
     secuencia_no_grande = []
     patron_referencia = bitarray("1011010110110")
     patron_encontrar = bitarray("110101101")
+#    patron_encontrar = bitarray("1011010110110")
 #    patron_referencia = bitarray("1011010110110")
 #    patron_encontrar = bitarray("0110")
     patron_referencia.reverse()
@@ -153,7 +193,8 @@ if __name__ == '__main__':
     posiciones = {}
     
     
-    logging.basicConfig(level=nivel_log)
+    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+    logging.basicConfig(level=nivel_log, format=FORMAT)
     logger_cagada = logging.getLogger("asa")
     logger_cagada.setLevel(nivel_log)
 
@@ -169,4 +210,4 @@ if __name__ == '__main__':
     fibonazi_genera_sequencia_repeticiones(secuencia_no_grande, False)
 #    logger_cagada.debug("la seq no grande %s"%secuencia_no_grande)
 
-fibonazi_encuentra_primera_aparicion_patron(patron_referencia, palabras_patron)
+fibonazi_encuentra_primera_aparicion_patron(patron_encontrar, palabras_patron)
