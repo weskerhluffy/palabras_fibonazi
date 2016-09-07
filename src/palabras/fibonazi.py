@@ -20,7 +20,7 @@ def caca_ordena_dick_llave(dick):
 def caca_ordena_dick_valor(dick):
     return sorted(dick.items(), key=lambda cosa: operator.itemgetter(cosa[1], cosa[0]))
 
-def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos,corto_circuito=False):
+def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos, corto_circuito=False):
     tamano_patron_referencia = 0
     tamano_patron_encontrar = 0
     
@@ -112,11 +112,18 @@ def fibonazi_genera_sequencia_repeticiones(secuencia, generar_grande):
         secuencia.append(num_actual)
 
 def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base):
+    siguiente_coincidencia_doble = False
     tam_patron = 0
     idx_patron_tamano_coincide = 0
+    tam_posiciones_match_completo = 0
+    tam_componente_1 = 0
+    idx_patron_encontrado = -1
     patron_tamano_coincide = []
+    posiciones_match_completo_llave = []
     posiciones_patron = {}
+    posiciones_match_completo = {}
     patron_base_1 = None
+    patron_base_2 = None
     
     tam_patron = len(patron_referencia)
     
@@ -131,24 +138,117 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
     assert(len(patron_tamano_coincide) >= len(patron_referencia))
     
     patron_base_1 = patrones_base[idx_patron_tamano_coincide + 1]
+    patron_base_2 = patrones_base[idx_patron_tamano_coincide + 2]
     
-    fibonazi_compara_patrones(patron_referencia, patron_tamano_coincide, posiciones_patron)
+    
+    fibonazi_compara_patrones(patron_tamano_coincide, patron_referencia , posiciones_patron, posiciones_match_completo)
+    
+    tam_posiciones_match_completo = len(posiciones_match_completo)
+    
+    assert(not tam_posiciones_match_completo or tam_posiciones_match_completo == 1)
+    
+    posiciones_match_completo_llave = caca_ordena_dick_llave(posiciones_match_completo)
     
     logger_cagada.debug("posiciones originales %s" % posiciones_patron)
+    logger_cagada.debug("matches completos %s" % posiciones_match_completo)
+    
+    if(tam_posiciones_match_completo):
+        idx_patron_encontrado = idx_patron_tamano_coincide 
+        
+        tam_componente_1 = len(patrones_base[idx_patron_tamano_coincide - 1])
+        
+        logger_cagada.debug("patron enc en base 0 %u" % idx_patron_encontrado)
+        if(tam_patron <= tam_componente_1 and posiciones_match_completo_llave[0][0] >= 2):
+            siguiente_coincidencia_doble = True
+            logger_cagada.debug("ven bailalo la siwiente ocurrencia es d 2")
+        
+    else:
+        posiciones_patron.clear()
+        posiciones_match_completo.clear()
+        
+        fibonazi_compara_patrones(patron_base_1, patron_referencia , posiciones_patron, posiciones_match_completo)
+        
+        tam_posiciones_match_completo = len(posiciones_match_completo)
+        
+        assert(not tam_posiciones_match_completo or tam_posiciones_match_completo == 1)
+        
+        posiciones_match_completo_llave = caca_ordena_dick_llave(posiciones_match_completo)
+        
+        logger_cagada.debug("posiciones originales base 1 %s" % posiciones_patron)
+        logger_cagada.debug("matches completos base 1 %s" % posiciones_match_completo_llave)
+        
+        if(tam_posiciones_match_completo):
+            idx_patron_encontrado = idx_patron_tamano_coincide + 1
+            logger_cagada.debug("patron enc en base 1 %u" % idx_patron_encontrado)
+            
+            tam_componente_1 = len(patrones_base[idx_patron_tamano_coincide + 1 - 1])
+            if(tam_patron <= tam_componente_1 and posiciones_match_completo_llave[0][0] >= 2):
+                siguiente_coincidencia_doble = True
+                logger_cagada.debug("ven bailalo la siwiente ocurrencia es d 2")
+        
+        else:
+            posiciones_patron.clear()
+            posiciones_match_completo.clear()
+            
+            fibonazi_compara_patrones(patron_base_2, patron_referencia, posiciones_patron, posiciones_match_completo)
+            
+            tam_posiciones_match_completo = len(posiciones_match_completo)
+            
+            assert(tam_posiciones_match_completo == 1)
+            
+            posiciones_match_completo_llave = caca_ordena_dick_llave(posiciones_match_completo)
+            
+            logger_cagada.debug("posiciones originales base 2 %s" % posiciones_patron)
+            logger_cagada.debug("matches completos base 2 %s" % posiciones_match_completo)
+            
+            tam_componente_1 = len(patrones_base[idx_patron_tamano_coincide + 2 - 1])
+            if(tam_patron <= tam_componente_1 and posiciones_match_completo_llave[0][0] >= 2):
+                siguiente_coincidencia_doble = True
+                logger_cagada.debug("ven bailalo la siwiente ocurrencia es d 2")
+            
+            
+            idx_patron_encontrado = idx_patron_tamano_coincide + 2
+            
+            
+            logger_cagada.debug("patron enc en base 2 %u" % idx_patron_encontrado)
+            
+    assert(idx_patron_encontrado >= 0)
+    
+    logger_cagada.debug("ella no suelta idx %u siwiente doble %s" % (idx_patron_encontrado, siguiente_coincidencia_doble))
+    
+    return (idx_patron_encontrado, siguiente_coincidencia_doble)
+        
+def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_buscar, repeticiones_inicio_lento, repeticiones_inicio_rapido):
+    segunda_aparicion_doble = False
+    idx_primera_aparicion_patron = 0
+    separacion_primera_aparicion_y_donde_buscar = 0
+    num_repeticiones = 0
+    
+    (idx_primera_aparicion_patron, segunda_aparicion_doble) = fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base)
+    
+    separacion_primera_aparicion_y_donde_buscar = idx_patrones_base_donde_buscar - idx_primera_aparicion_patron
+    
+    logger_cagada.debug("la primera aparicion en %u, se busca en %u, diferencia %u" % (idx_primera_aparicion_patron, idx_patrones_base_donde_buscar, separacion_primera_aparicion_y_donde_buscar))
+    
+    if(not segunda_aparicion_doble):
+        logger_cagada.debug("buscando en inicio lento")
+        num_repeticiones = repeticiones_inicio_lento[separacion_primera_aparicion_y_donde_buscar]
+    else:
+        logger_cagada.debug("buscando en inicio lento")
+        num_repeticiones = repeticiones_inicio_rapido[separacion_primera_aparicion_y_donde_buscar]
+    
+    logger_cagada.debug("")
     
     
-
 
 if __name__ == '__main__':
     palabras_patron = []
     secuencia_grande = []
     secuencia_no_grande = []
-    patron_referencia = bitarray("1011010110110")
-#    patron_encontrar = bitarray("110101101")
-#    patron_encontrar = bitarray("1101101011")
+    patron_encontrar = bitarray("110101101")
+    patron_encontrar = bitarray("1101101011")
     patron_encontrar = bitarray("0101101011")
 #    patron_encontrar = bitarray("0110")
-    patron_referencia.reverse()
     patron_encontrar.reverse()
     posiciones = {}
     
