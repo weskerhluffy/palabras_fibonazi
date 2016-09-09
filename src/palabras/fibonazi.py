@@ -30,10 +30,8 @@ byteorder = sys.byteorder
 bytealigned = False
 """Determines whether a number of methods default to working only on byte boundaries."""
 
-# Maximum number of digits to use in __str__ and __repr__.
 MAX_CHARS = 250
 
-# Maximum size of caches used for speed optimisations.
 CACHE_SIZE = 1000
 
 class Error(Exception):
@@ -120,10 +118,8 @@ class ConstByteStore(object):
         """Join another store on to the end of this one."""
         if not store.bitlength:
             return
-        # Set new array offset to the number of bits in the final byte of current array.
         store = offsetcopy(store, (self.offset + self.bitlength) % 8)
         if store.offset:
-            # first do the byte with the join.
             joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) |
                        (store.getbyte(0) & (255 >> store.offset)))
             self._rawarray.append(joinval)
@@ -164,9 +160,7 @@ def offsetcopy(s, newoffset):
         d = s._rawarray
         assert newoffset != s.offset % 8
         if newoffset < s.offset % 8:
-            # We need to shift everything left
             shiftleft = s.offset % 8 - newoffset
-            # First deal with everything except for the final byte
             for x in range(s.byteoffset, s.byteoffset + s.bytelength - 1):
                 newdata.append(((d[x] << shiftleft) & 0xff) +\
                                (d[x + 1] >> (8 - shiftleft)))
@@ -196,9 +190,6 @@ def equal(a, b):
 
     Not part of public interface.
     """
-    # We want to return False for inequality as soon as possible, which
-    # means we get lots of special cases.
-    # First the easy one - compare lengths:
     a_bitlength = a.bitlength
     b_bitlength = b.bitlength
     if a_bitlength != b_bitlength:
@@ -206,10 +197,8 @@ def equal(a, b):
     if not a_bitlength:
         assert b_bitlength == 0
         return True
-    # Make 'a' the one with the smaller offset
     if (a.offset % 8) > (b.offset % 8):
         a, b = b, a
-    # and create some aliases
     a_bitoff = a.offset % 8
     b_bitoff = b.offset % 8
     a_byteoffset = a.byteoffset
@@ -219,7 +208,6 @@ def equal(a, b):
     da = a._rawarray
     db = b._rawarray
 
-    # If they are pointing to the same data, they must be equal
     if da is db and a.offset == b.offset:
         return True
 
@@ -227,33 +215,26 @@ def equal(a, b):
         bits_spare_in_last_byte = 8 - (a_bitoff + a_bitlength) % 8
         if bits_spare_in_last_byte == 8:
             bits_spare_in_last_byte = 0
-        # Special case for a, b contained in a single byte
         if a_bytelength == 1:
             a_val = ((da[a_byteoffset] << a_bitoff) & 0xff) >> (8 - a_bitlength)
             b_val = ((db[b_byteoffset] << b_bitoff) & 0xff) >> (8 - b_bitlength)
             return a_val == b_val
-        # Otherwise check first byte
         if da[a_byteoffset] & (0xff >> a_bitoff) != db[b_byteoffset] & (0xff >> b_bitoff):
             return False
-        # then everything up to the last
         b_a_offset = b_byteoffset - a_byteoffset
         for x in range(1 + a_byteoffset, a_byteoffset + a_bytelength - 1):
             if da[x] != db[b_a_offset + x]:
                 return False
-        # and finally the last byte
         return (da[a_byteoffset + a_bytelength - 1] >> bits_spare_in_last_byte ==
                 db[b_byteoffset + b_bytelength - 1] >> bits_spare_in_last_byte)
 
     assert a_bitoff != b_bitoff
-    # This is how much we need to shift a to the right to compare with b:
     shift = b_bitoff - a_bitoff
-    # Special case for b only one byte long
     if b_bytelength == 1:
         assert a_bytelength == 1
         a_val = ((da[a_byteoffset] << a_bitoff) & 0xff) >> (8 - a_bitlength)
         b_val = ((db[b_byteoffset] << b_bitoff) & 0xff) >> (8 - b_bitlength)
         return a_val == b_val
-    # Special case for a only one byte long
     if a_bytelength == 1:
         assert b_bytelength == 2
         a_val = ((da[a_byteoffset] << a_bitoff) & 0xff) >> (8 - a_bitlength)
@@ -262,19 +243,15 @@ def equal(a, b):
         b_val >>= 16 - b_bitlength
         return a_val == b_val
 
-    # Compare first byte of b with bits from first byte of a
     if (da[a_byteoffset] & (0xff >> a_bitoff)) >> shift != db[b_byteoffset] & (0xff >> b_bitoff):
         return False
-    # Now compare every full byte of b with bits from 2 bytes of a
     for x in range(1, b_bytelength - 1):
-        # Construct byte from 2 bytes in a to compare to byte in b
         b_val = db[b_byteoffset + x]
         a_val = ((da[a_byteoffset + x - 1] << 8) + da[a_byteoffset + x]) >> shift
         a_val &= 0xff
         if a_val != b_val:
             return False
 
-    # Now check bits in final byte of b
     final_b_bits = (b.offset + b_bitlength) % 8
     if not final_b_bits:
         final_b_bits = 8
@@ -298,12 +275,8 @@ def equal(a, b):
 class MmapByteArray(object):
     pass
 
-# This creates a dictionary for every possible byte with the value being
-# the key with its bits reversed.
 BYTE_REVERSAL_DICT = dict()
 
-# For Python 2.x/ 3.x coexistence
-# Yes this is very very hacky.
 try:
     xrange
     for i in range(256):
@@ -315,7 +288,6 @@ except NameError:
     xrange = range
     basestring = str
 
-# Python 2.x octals start with '0', in Python 3 it's '0o'
 LEADING_OCT_CHARS = len(oct(1)) - 1
 
 def tidy_input_string(s):
@@ -333,30 +305,23 @@ DEFAULT_UINT = re.compile(r'(?P<len>[^=]+)?(=(?P<value>.*))?$', re.IGNORECASE)
 
 MULTIPLICATIVE_RE = re.compile(r'(?P<factor>.*)\*(?P<token>.+)')
 
-# Hex, oct or binary literals
 LITERAL_RE = re.compile(r'(?P<name>0(x|o|b))(?P<value>.+)', re.IGNORECASE)
 
-# An endianness indicator followed by one or more struct.pack codes
 STRUCT_PACK_RE = re.compile(r'(?P<endian><|>|@)?(?P<fmt>(?:\d*[bBhHlLqQfd])+)$')
 
-# A number followed by a single character struct.pack code
 STRUCT_SPLIT_RE = re.compile(r'\d*[bBhHlLqQfd]')
 
-# These replicate the struct.pack codes
-# Big-endian
 REPLACEMENTS_BE = {'b': 'intbe:8', 'B': 'uintbe:8',
                    'h': 'intbe:16', 'H': 'uintbe:16',
                    'l': 'intbe:32', 'L': 'uintbe:32',
                    'q': 'intbe:64', 'Q': 'uintbe:64',
                    'f': 'floatbe:32', 'd': 'floatbe:64'}
-# Little-endian
 REPLACEMENTS_LE = {'b': 'intle:8', 'B': 'uintle:8',
                    'h': 'intle:16', 'H': 'uintle:16',
                    'l': 'intle:32', 'L': 'uintle:32',
                    'q': 'intle:64', 'Q': 'uintle:64',
                    'f': 'floatle:32', 'd': 'floatle:64'}
 
-# Size in bytes of all the pack codes.
 PACK_CODE_SIZE = {'b': 1, 'B': 1, 'h': 2, 'H': 2, 'l': 4, 'L': 4,
                   'q': 8, 'Q': 8, 'f': 4, 'd': 8}
 
@@ -366,7 +331,6 @@ _tokenname_to_initialiser = {'hex': 'hex', '0x': 'hex', '0X': 'hex', 'oct': 'oct
 
 OCT_TO_BITS = ['{0:03b}'.format(i) for i in xrange(8)]
 
-# A dictionary of number of 1 bits contained in binary representation of any byte
 BIT_COUNT = dict(zip(xrange(256), [bin(i).count('1') for i in xrange(256)]))
 
 
@@ -378,8 +342,6 @@ class Bits(object):
         pass
 
     def __new__(cls, auto=None, length=None, offset=None, _cache={}, **kwargs):
-        # For instances auto-initialised with a string we intern the
-        # instance for re-use.
         try:
             if isinstance(auto, basestring):
                 try:
@@ -414,7 +376,6 @@ class Bits(object):
             self._initialise_from_auto(auto, length, offset)
             return
         if not kwargs:
-            # No initialisers, so initialise with nothing or zero bits
             if length is not None and length != 0:
                 data = bytearray((length + 7) // 8)
                 self._setbytes_unsafe(data, length, 0)
@@ -447,8 +408,6 @@ class Bits(object):
 
     def __copy__(self):
         """Return a new copy of the Bits for the copy module."""
-        # Note that if you want a new copy (different ID), use _copy instead.
-        # The copy can return self as it's immutable.
         return self
     
     def __add__(self, bs):
@@ -483,16 +442,13 @@ class Bits(object):
         try:
             step = key.step if key.step is not None else 1
         except AttributeError:
-            # single element
             if key < 0:
                 key += length
             if not 0 <= key < length:
                 raise IndexError("Slice index out of range.")
-            # Single bit, return True or False
             return self._datastore.getbit(key)
         else:
             if step != 1:
-                # convert to binary string and use string slicing
                 bs = self.__class__()
                 bs._setbin_unsafe(self._getbin().__getitem__(key))
                 return bs
@@ -521,16 +477,11 @@ class Bits(object):
         if not length:
             return ''
         if length > MAX_CHARS * 4:
-            # Too long for hex. Truncate...
             return ''.join(('0x', self._readhex(MAX_CHARS * 4, 0), '...'))
-        # If it's quite short and we can't do hex then use bin
         if length < 32 and length % 4 != 0:
             return '0b' + self.bin
-        # If we can use hex then do so
         if not length % 4:
             return '0x' + self.hex
-        # Otherwise first we do as much as we can in hex
-        # then add on 1, 2 or 3 bits on at the end
         bits_at_end = length % 4
         return ''.join(('0x', self._readhex(length - bits_at_end, 0),
                         ', ', '0b',
@@ -586,7 +537,6 @@ class Bits(object):
             self._setbytes_unsafe(bytearray(b), len(b) * 8, 0)
             return
         if isinstance(s, numbers.Integral):
-            # Initialise with s zero bits.
             if s < 0:
                 msg = "Can't create bitstring of negative length {0}."
                 raise CreationError(msg, s)
@@ -594,7 +544,6 @@ class Bits(object):
             self._datastore = ByteStore(data, s, 0)
             return
         if isinstance(s, collections.Iterable):
-            # Evaluate each item as True or False and set bits to 1 or 0.
             self._setbin_unsafe(''.join(str(int(bool(x))) for x in s))
             return
         raise TypeError("Cannot initialise bitstring from {0}.".format(type(s)))
@@ -610,7 +559,6 @@ class Bits(object):
         """Set the data from a string."""
         data = bytearray(data)
         if length is None:
-            # Use to the end of the data
             length = len(data)*8 - offset
             self._datastore = ByteStore(data, length, offset)
         else:
@@ -640,14 +588,12 @@ class Bits(object):
     def _setbin_safe(self, binstring):
         """Reset the bitstring to the value given in binstring."""
         binstring = tidy_input_string(binstring)
-        # remove any 0b if present
         binstring = binstring.replace('0b', '')
         self._setbin_unsafe(binstring)
 
     def _setbin_unsafe(self, binstring):
         """Same as _setbin_safe, but input isn't sanity checked. binstring mustn't start with '0b'."""
         length = len(binstring)
-        # pad with zeros up to byte boundary if needed
         boundary = ((length + 7) // 8) * 8
         padded_binstring = binstring + '0' * (boundary - length)\
                            if len(binstring) < boundary else binstring
@@ -662,17 +608,13 @@ class Bits(object):
         """Read bits and interpret as a binary string."""
         if not length:
             return ''
-        # Get the byte slice containing our bit slice
         startbyte, startoffset = divmod(start + self._offset, 8)
         endbyte = (start + self._offset + length - 1) // 8
         b = self._datastore.getbyteslice(startbyte, endbyte + 1)
-        # Convert to a string of '0' and '1's (via a hex string an and int!)
         try:
             c = "{:0{}b}".format(int(binascii.hexlify(b), 16), 8*len(b))
         except TypeError:
-            # Hack to get Python 2.6 working
             c = "{0:0{1}b}".format(int(binascii.hexlify(str(b)), 16), 8*len(b))
-        # Finally chop off any extra bits.
         return c[startoffset:startoffset + length]
 
     def _getbin(self):
@@ -690,10 +632,7 @@ class Bits(object):
         try:
             s = s.hex() # Available in Python 3.5
         except AttributeError:
-            # This monstrosity is the only thing I could get to work for both 2.6 and 3.1.
-            # TODO: Is utf-8 really what we mean here?
             s = str(binascii.hexlify(s).decode('utf-8'))
-        # If there's one nibble too many then cut it off
         return s[:-1] if (length // 4) % 2 else s
 
     def _getoffset(self):
@@ -727,11 +666,8 @@ class Bits(object):
 
     def _reverse(self):
         """Reverse all bits in-place."""
-        # Reverse the contents of each byte
         n = [BYTE_REVERSAL_DICT[b] for b in self._datastore.rawbytes]
-        # Then reverse the order of the bytes
         n.reverse()
-        # The new offset is the number of bits that were unused at the end.
         newoffset = 8 - (self._offset + self.len) % 8
         if newoffset == 8:
             newoffset = 0
@@ -762,13 +698,11 @@ class Bits(object):
 
         """
         d = offsetcopy(self._datastore, 0).rawbytes
-        # Need to ensure that unused bits at end are set to zero
         unusedbits = 8 - self.len % 8
         if unusedbits != 8:
             d[-1] &= (0xff << unusedbits)
         return bytes(d)
 
-    # Create native-endian functions as aliases depending on the byteorder
 
     _offset = property(_getoffset)
 
@@ -783,13 +717,11 @@ class Bits(object):
                    """)
 
 
-# Dictionary that maps token names to the function that reads them.
 name_to_read = {
                 'hex': Bits._readhex,
                 'bin': Bits._readbin,
                 }
 
-# Dictionaries for mapping init keywords with init functions.
 init_with_length_and_offset = {
                                }
 
@@ -805,11 +737,9 @@ class BitArray(Bits):
 
     __slots__ = ()
 
-    # As BitArray objects are mutable, we shouldn't allow them to be hashed.
     __hash__ = None
 
     def __init__(self, auto=None, length=None, offset=None, **kwargs):
-        # For mutable BitArrays we always read in files to memory:
         if not isinstance(self._datastore, ByteStore):
             self._ensureinmemory()
 
@@ -862,12 +792,10 @@ class BitStream(ConstBitStream, BitArray):
 
     __slots__ = ()
 
-    # As BitStream objects are mutable, we shouldn't allow them to be hashed.
     __hash__ = None
 
     def __init__(self, auto=None, length=None, offset=None, **kwargs):
         self._pos = 0
-        # For mutable BitStreams we always read in files to memory:
         if not isinstance(self._datastore, ByteStore):
             self._ensureinmemory()
 
@@ -877,7 +805,6 @@ class BitStream(ConstBitStream, BitArray):
         return x
     
 
-# Aliases for backward compatibility
 ConstBitArray = Bits
 BitString = BitStream
 
@@ -893,7 +820,6 @@ __all__ = ['ConstBitArray', 'ConstBitStream', 'BitStream', 'BitArray',
 
 logger_cagada = None
 nivel_log = logging.ERROR
-# nivel_log = logging.DEBUG
 
 def caca_ordena_dick_llave(dick):
     return sorted(dick.items(), key=lambda cosa: cosa[0])
@@ -910,7 +836,6 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
 
     logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))), BitArray(list(reversed(patron_encontrar)))))
     
-#    assert(tamano_patron_referencia >= tamano_patron_encontrar)
     
     for pos_pat_ref in range(tamano_patron_referencia):
         posiciones_a_borrar = array.array("I")
@@ -975,7 +900,6 @@ def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
 
         for idx_pat in range(tamano_palabra_anterior_1 + 1, tamano_palabra_actual + 1):
             tam_palabra_a_idx_patron.append(len(palabras) - 1)
-#        logger_cagada.debug("el tamano actual de patron %s"%tamano_palabra_actual)
         assert(tamano_palabra_actual == len(palabras[-1]))
         tamano_palabra_anterior_2 = tamano_palabra_anterior_1
         tamano_palabra_anterior_1 = tamano_palabra_actual
@@ -983,7 +907,6 @@ def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
     for palabra in palabras:
         palabra.reverse()
     
-#    logger_cagada.debug("las palabras patron %s"%palabras)
     logger_cagada.debug("el tamano final %s" % tamano_palabra_actual)
 
 def fibonazi_genera_sequencia_repeticiones(secuencia, generar_grande):
@@ -1054,7 +977,6 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
         tam_componente_1 = len(patrones_base[idx_patron_tamano_coincide - 1])
         
         logger_cagada.debug("patron enc en base 0 %u" % idx_patron_encontrado)
-#        if(tam_patron <= tam_componente_1 and posiciones_match_completo_llave[0][0] >= 2):
         if(posiciones_match_completo_llave[0][0] >= 2):
             siguiente_coincidencia_doble = True
             logger_cagada.debug("ven bailalo la siwiente ocurrencia es d 2")
@@ -1167,7 +1089,6 @@ def fibonazi_genere_todos_los_pedazos(palabrota, tam_ini=1, tam_fin=100000):
     tam_pal = len(palabrota)
     for tam_act in range(tam_ini, tam_fin + 1):
         for pos_ini in range(tam_pal - tam_act):
-#            print("q la rumba %u esta %u"%(tam_act,pos_ini))
             pala_act = palabrota[pos_ini:pos_ini + tam_act]
             butes = pala_act.tobytes()
             if(butes not in ya_generadas):
@@ -1183,11 +1104,6 @@ if __name__ == '__main__':
     secuencia_grande = []
     secuencia_no_grande = []
     secuencia_peke = []
-#    patron_encontrar = BitArray("110101101")
-#    patron_encontrar = BitArray("1101101011")
-#    patron_encontrar = BitArray("0101101011")
-#    patron_encontrar = BitArray("1101011010")
-#    patron_encontrar = BitArray("0110")
     tam_palabra_a_idx_patron = []
     lineas = None
     parser = None
@@ -1205,10 +1121,8 @@ if __name__ == '__main__':
 
     fibonazi_genera_palabras_patron(palabras_patron, tam_palabra_a_idx_patron)
 
-#    logger_cagada.debug("homi %s"%palabras_patron)
 
     if(args.nadena):
-#        print("bailando ella %u"%len(palabras_patron[25]))
         fibonazi_genere_todos_los_pedazos(palabras_patron[25], tam_ini=1, tam_fin=100)
         fibonazi_genere_todos_los_pedazos(palabras_patron[25], tam_ini=99990, tam_fin=100000)
         sys.exit()
@@ -1233,11 +1147,9 @@ if __name__ == '__main__':
 
             idx_a_buscar = int(linea.strip())
             logger_cagada.debug("si alguna vez %s no dig" % (lineas[linea_idx + 1].strip()))
-#            print("si alguna vez %s no dig"%(lineas[linea_idx+1].strip()))
             patron_encontrar = BitArray(bin=lineas[linea_idx + 1].strip())
             logger_cagada.debug("vinimos para liar %u %s" % (idx_a_buscar, patron_encontrar))
             patron_encontrar.reverse()
-#            print("vinimos para liar %u %s"%(idx_a_buscar, patron_encontrar))
 
             num_repeticiones = fibonazi_main(patron_encontrar, palabras_patron, idx_a_buscar, secuencia_no_grande, secuencia_grande, secuencia_peke)
             print("Case #%u %u" % (linea_idx / 2 + 1, num_repeticiones))
@@ -1245,4 +1157,3 @@ if __name__ == '__main__':
             continue
     
 
-#    fibonazi_encuentra_primera_aparicion_patron(patron_encontrar, palabras_patron)
