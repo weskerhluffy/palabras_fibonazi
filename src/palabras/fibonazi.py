@@ -11,7 +11,7 @@ import operator
 import fileinput
 import argparse
 import sys
-from bitarray import bitarray
+from bitstring import BitArray
 
 logger_cagada = None
 nivel_log = logging.ERROR
@@ -30,7 +30,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     tamano_patron_referencia = len(patron_referencia)
     tamano_patron_encontrar = len(patron_encontrar)
 
-    logger_cagada.debug("patron ref %s patron enc %s" % (bitarray(list(reversed(patron_referencia))), bitarray(list(reversed(patron_encontrar)))))
+    logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))), BitArray(list(reversed(patron_encontrar)))))
     
 #    assert(tamano_patron_referencia >= tamano_patron_encontrar)
     
@@ -85,8 +85,8 @@ def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
     tamano_palabra_anterior_1 = 1
     tamano_palabra_anterior_2 = 1
 
-    palabras.append(bitarray([False]))
-    palabras.append(bitarray([True]))
+    palabras.append(BitArray([False]))
+    palabras.append(BitArray([True]))
 
     tam_palabra_a_idx_patron.append(0)
     tam_palabra_a_idx_patron.append(0)
@@ -142,11 +142,11 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
     tam_patron = len(patron_referencia)
     
     if(tam_patron == 1):
-        if(patron_referencia == bitarray([False])):
+        if(patron_referencia == BitArray([False])):
             return (0, False)
         else:
             return (1, False)
-    if(tam_patron == 1 and patron_referencia == bitarray([False, True])):
+    if(tam_patron == 1 and patron_referencia == BitArray([False, True])):
         return (2, False)
     
     idx_patron_tamano_coincide = tam_palabra_a_idx_patron[tam_patron]
@@ -252,7 +252,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
     assert(separacion_primera_aparicion_y_donde_buscar >= 0)
     
     if(not segunda_aparicion_doble):
-        if(patron_referencia == bitarray([False, True])):
+        if(patron_referencia == BitArray([False, True])):
             logger_cagada.debug("buscando en inicio muuuy lento pos %u" % separacion_primera_aparicion_y_donde_buscar)
             num_repeticiones = repeticiones_inicio_muy_lento[separacion_primera_aparicion_y_donde_buscar]
         else:
@@ -262,7 +262,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
         logger_cagada.debug("buscando en inicio rapido %u" % separacion_primera_aparicion_y_donde_buscar)
         num_repeticiones = repeticiones_inicio_rapido[separacion_primera_aparicion_y_donde_buscar]
     
-    logger_cagada.debug("el num de repeticiones de %s en la pos %u es %u" % (bitarray(list(reversed(patron_referencia))), idx_patrones_base_donde_buscar, num_repeticiones))
+    logger_cagada.debug("el num de repeticiones de %s en la pos %u es %u" % (BitArray(list(reversed(patron_referencia))), idx_patrones_base_donde_buscar, num_repeticiones))
 
     assert(num_repeticiones)
 
@@ -297,7 +297,7 @@ def fibonazi_genere_todos_los_pedazos(palabrota, tam_ini=1, tam_fin=100000):
                 ya_generadas[butes] = True
                 for idx_donde_buscar in range(idx_primera_aparicion, 101):
                     print("%u" % idx_donde_buscar)
-                    print("%s" % (pala_act.to01()))
+                    print("%s" % (pala_act.bin))
 
 
 if __name__ == '__main__':
@@ -305,11 +305,11 @@ if __name__ == '__main__':
     secuencia_grande = []
     secuencia_no_grande = []
     secuencia_peke = []
-#    patron_encontrar = bitarray("110101101")
-#    patron_encontrar = bitarray("1101101011")
-#    patron_encontrar = bitarray("0101101011")
-#    patron_encontrar = bitarray("1101011010")
-#    patron_encontrar = bitarray("0110")
+#    patron_encontrar = BitArray("110101101")
+#    patron_encontrar = BitArray("1101101011")
+#    patron_encontrar = BitArray("0101101011")
+#    patron_encontrar = BitArray("1101011010")
+#    patron_encontrar = BitArray("0110")
     tam_palabra_a_idx_patron = []
     lineas = None
     parser = None
@@ -356,7 +356,7 @@ if __name__ == '__main__':
             idx_a_buscar = int(linea.strip())
             logger_cagada.debug("si alguna vez %s no dig" % (lineas[linea_idx + 1].strip()))
 #            print("si alguna vez %s no dig"%(lineas[linea_idx+1].strip()))
-            patron_encontrar = bitarray(lineas[linea_idx + 1].strip())
+            patron_encontrar = BitArray(bin=lineas[linea_idx + 1].strip())
             logger_cagada.debug("vinimos para liar %u %s" % (idx_a_buscar, patron_encontrar))
             patron_encontrar.reverse()
 #            print("vinimos para liar %u %s"%(idx_a_buscar, patron_encontrar))
