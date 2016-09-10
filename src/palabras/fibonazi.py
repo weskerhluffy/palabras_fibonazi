@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-#nivel_log = logging.DEBUG
+# nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -584,6 +584,14 @@ class Bits(object):
             s = str(binascii.hexlify(s).decode('utf-8'))
         return s[:-1] if (length // 4) % 2 else s
 
+    def _gethex(self):
+        """Return the hexadecimal representation as a string prefixed with '0x'.
+
+        Raises an InterpretError if the bitstring's length is not a multiple of 4.
+
+        """
+        return self._readhex(self.len, 0)
+
     def _getoffset(self):
         return self._datastore.offset
 
@@ -595,6 +603,24 @@ class Bits(object):
         s_copy._setbytes_unsafe(self._datastore.getbyteslice(0, self._datastore.bytelength),
                                 self.len, self._offset)
         return s_copy
+
+    def _sethex(self, hexstring):
+        """Reset the bitstring to have the value given in hexstring."""
+        hexstring = tidy_input_string(hexstring)
+        # remove any 0x if present
+        hexstring = hexstring.replace('0x', '')
+        length = len(hexstring)
+        if length % 2:
+            hexstring += '0'
+        try:
+            try:
+                data = bytearray.fromhex(hexstring)
+            except TypeError:
+                # Python 2.6 needs a unicode string (a bug). 2.7 and 3.x work fine.
+                data = bytearray.fromhex(unicode(hexstring))
+        except ValueError:
+            raise CreationError("Invalid symbol in hex initialiser.")
+        self._setbytes_unsafe(data, length * 4, 0)
 
     def _slice(self, start, end):
         if end == start:
@@ -699,6 +725,9 @@ class BitArray(Bits):
     bytes = property(Bits._getbytes, Bits._setbytes_safe,
                      doc="""The bitstring as a ordinary string. Read and write.
                       """)
+    hex = property(Bits._gethex, Bits._sethex,
+                   doc="""The bitstring as a hexadecimal string. Read and write.
+                       """)
 
 
 
