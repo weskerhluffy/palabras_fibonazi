@@ -848,11 +848,11 @@ def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
     tam_palabra_a_idx_patron.append(0)
     tam_palabra_a_idx_patron.append(0)
 
-    while tamano_palabra_actual < 100000:
+    while tamano_palabra_actual < 300000:
         tamano_palabra_actual = tamano_palabra_anterior_1 + tamano_palabra_anterior_2
         palabras.append(palabras[-1] + palabras[-2])
 
-        for idx_pat in range(tamano_palabra_anterior_1 + 1, tamano_palabra_actual + 1):
+        for _ in range(tamano_palabra_anterior_1 + 1, tamano_palabra_actual + 1):
             tam_palabra_a_idx_patron.append(len(palabras) - 1)
         assert(tamano_palabra_actual == len(palabras[-1]))
         tamano_palabra_anterior_2 = tamano_palabra_anterior_1
