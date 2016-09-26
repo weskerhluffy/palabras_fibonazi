@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-# nivel_log = logging.DEBUG
+#nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -85,10 +85,16 @@ class ConstByteStore(object):
         if bitlength is None:
             bitlength = 8 * len(data) - offset
         self.offset = offset
+        logger_cagada.debug("El offset al crear %s" % self.offset)
         self.bitlength = bitlength
+        logger_cagada.debug("El bitlen al crear %s" % self.bitlength)
 
+#    @profile
     def getbit(self, pos):
         assert 0 <= pos < self.bitlength
+        logger_cagada.debug("el patron es %s" % self._rawarray)
+        logger_cagada.debug("q vergas es offset %s" % (self.offset))
+        logger_cagada.debug("la pos deseada es %s" % (pos))
         byte, bit = divmod(self.offset + pos, 8)
         return bool(self._rawarray[byte] & (128 >> bit))
 
@@ -403,35 +409,7 @@ class Bits(object):
         return s
 
     def __getitem__(self, key):
-        length = self.len
-        try:
-            step = key.step if key.step is not None else 1
-        except AttributeError:
-            if key < 0:
-                key += length
-            if not 0 <= key < length:
-                raise IndexError("Slice index out of range.")
-            return self._datastore.getbit(key)
-        else:
-            if step != 1:
-                bs = self.__class__()
-                bs._setbin_unsafe(self._getbin().__getitem__(key))
-                return bs
-            start, stop = 0, length
-            if key.start is not None:
-                start = key.start
-                if key.start < 0:
-                    start += stop
-            if key.stop is not None:
-                stop = key.stop
-                if key.stop < 0:
-                    stop += length
-            start = max(start, 0)
-            stop = min(stop, length)
-            if start < stop:
-                return self._slice(start, stop)
-            else:
-                return self.__class__()
+        return self._datastore.getbit(key)
 
     def __len__(self):
         return self._getlength()
@@ -527,6 +505,7 @@ class Bits(object):
                 self._datastore = ByteStore(data, length, offset)
 
     def _setbytes_unsafe(self, data, length, offset):
+        logger_cagada.debug("la del moño %s con offset %d" % (data, offset))
         self._datastore = ByteStore(data[:], length, offset)
         assert self._assertsanity()
         
@@ -540,6 +519,7 @@ class Bits(object):
 
 
     def _setbin_safe(self, binstring):
+        logger_cagada.debug("convirtiendo la cadena %s a bytearray? " % binstring)
         binstring = tidy_input_string(binstring)
         binstring = binstring.replace('0b', '')
         self._setbin_unsafe(binstring)
@@ -554,6 +534,7 @@ class Bits(object):
                         for x in xrange(0, len(padded_binstring), 8)]
         except ValueError:
             raise CreationError("Invalid character in bin initialiser {0}.", binstring)
+        logger_cagada.debug("la lista de bytes %s" % bytelist)
         self._setbytes_unsafe(bytearray(bytelist), length, 0)
 
     def _readbin(self, length, start):
@@ -781,6 +762,7 @@ def caca_ordena_dick_llave(dick):
 def caca_ordena_dick_valor(dick):
     return sorted(dick.items(), key=lambda cosa: operator.itemgetter(cosa[1], cosa[0]))
 
+#@profile
 def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos, corto_circuito=False, pegate=0):
     tamano_patron_referencia = 0
     tamano_patron_encontrar = 0

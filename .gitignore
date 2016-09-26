@@ -1,2 +1,8 @@
 
 *.pywhy
+
+src/palabras/ere
+
+src/palabras/ere.txt
+
+*.lprof
