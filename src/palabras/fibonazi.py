@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-#nivel_log = logging.DEBUG
+# nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -774,10 +774,12 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
 
     logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))), BitArray(list(reversed(patron_encontrar)))))
     
-    
     for pos_pat_ref in range(tamano_patron_referencia):
-        
-        if(patron_referencia[pos_pat_ref] == patron_encontrar[posicion_coincidente]):
+        byte, bit = divmod(patron_referencia._datastore.offset + pos_pat_ref, 8)
+        byte1, bit1 = divmod(patron_encontrar._datastore.offset + posicion_coincidente, 8)
+        logger_cagada.debug("byte %u bit %u de %u byte1 %u bit1 %u de %u" % (byte, bit, pos_pat_ref, byte1, bit1, posicion_coincidente))
+        logger_cagada.debug("loq c compara %s,%s", (patron_referencia._datastore._rawarray[byte] & (128 >> bit)) , (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)))
+        if((not (patron_referencia._datastore._rawarray[byte] & (128 >> bit))) == (not (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)))):
             posicion_coincidente += 1
             if(posicion_coincidente == tamano_patron_encontrar):
                 logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u" % (pos_pat_ref))
