@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-# nivel_log = logging.DEBUG
+nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -774,7 +774,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     tamano_patron_referencia = len(patron_referencia)
     tamano_patron_encontrar = len(patron_encontrar)
 
-    logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))), BitArray(list(reversed(patron_encontrar)))))
+    logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))).bin, BitArray(list(reversed(patron_encontrar))).bin))
     
     patron_referencia_raw = patron_referencia._datastore._rawarray
     patron_encontrar_raw = patron_encontrar._datastore._rawarray
@@ -786,7 +786,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
         byte1 = posicion_coincidente >> 3
         bit1 = posicion_coincidente & 7
         logger_cagada.debug("byte %u bit %u de %u byte1 %u bit1 %u de %u" % (byte, bit, pos_pat_ref, byte1, bit1, posicion_coincidente))
-        logger_cagada.debug("loq c compara %s,%s", (patron_referencia._datastore._rawarray[byte] & (128 >> bit)) , (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)))
+        logger_cagada.debug("loq c compara %s,%s o %s,%s posiciones %u,%u", (patron_referencia._datastore._rawarray[byte] & (128 >> bit)) , (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)) , not not (patron_referencia._datastore._rawarray[byte] & (128 >> bit)) , not not (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)) , pos_pat_ref - patron_referencia._datastore.offset, posicion_coincidente - patron_encontrar._datastore.offset)
         if((not (patron_referencia_raw[byte] & (128 >> bit))) == (not (patron_encontrar_raw[byte1] & (128 >> bit1)))):
             posicion_coincidente += 1
             if(posicion_coincidente - patron_encontrar._datastore.offset == tamano_patron_encontrar):
@@ -934,7 +934,7 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
             fibonazi_compara_patrones(patron_base_2, patron_referencia, posiciones_patron, posiciones_match_completo)
             
             tam_posiciones_match_completo = len(posiciones_match_completo)
-            
+           
             assert(tam_posiciones_match_completo == 1)
             
             posiciones_match_completo_llave = caca_ordena_dick_llave(posiciones_match_completo)
