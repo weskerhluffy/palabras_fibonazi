@@ -768,31 +768,37 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     tamano_patron_encontrar = 0
     posicion_coincidente = 0
     posicion_coincidente_ref = 0
+    patron_referencia_raw = []
+    patron_encontrar_raw = []
     
     tamano_patron_referencia = len(patron_referencia)
     tamano_patron_encontrar = len(patron_encontrar)
 
     logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))), BitArray(list(reversed(patron_encontrar)))))
     
-    for pos_pat_ref in range(tamano_patron_referencia):
-        byte, bit = divmod(patron_referencia._datastore.offset + pos_pat_ref, 8)
-        byte1, bit1 = divmod(patron_encontrar._datastore.offset + posicion_coincidente, 8)
+    patron_referencia_raw = patron_referencia._datastore._rawarray
+    patron_encontrar_raw = patron_encontrar._datastore._rawarray
+    
+    posicion_coincidente = patron_encontrar._datastore.offset
+    for pos_pat_ref in range(patron_referencia._datastore.offset, tamano_patron_referencia + patron_referencia._datastore.offset):
+        byte, bit = divmod(pos_pat_ref, 8)
+        byte1, bit1 = divmod(posicion_coincidente, 8)
         logger_cagada.debug("byte %u bit %u de %u byte1 %u bit1 %u de %u" % (byte, bit, pos_pat_ref, byte1, bit1, posicion_coincidente))
         logger_cagada.debug("loq c compara %s,%s", (patron_referencia._datastore._rawarray[byte] & (128 >> bit)) , (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)))
-        if((not (patron_referencia._datastore._rawarray[byte] & (128 >> bit))) == (not (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)))):
+        if((not (patron_referencia_raw[byte] & (128 >> bit))) == (not (patron_encontrar_raw[byte1] & (128 >> bit1)))):
             posicion_coincidente += 1
-            if(posicion_coincidente == tamano_patron_encontrar):
+            if(posicion_coincidente - patron_encontrar._datastore.offset == tamano_patron_encontrar):
                 logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u" % (pos_pat_ref))
-                matches_completos[pos_pat_ref] = True
-                posicion_coincidente_ref = pos_pat_ref
+                matches_completos[pos_pat_ref - patron_referencia._datastore.offset - tamano_patron_encontrar + 1] = True
+                posicion_coincidente_ref = pos_pat_ref - patron_referencia._datastore.offset
                 logger_cagada.debug("corto circuito activado asi q se sale")
                 break
             logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref, posicion_coincidente))
         else:
             logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref)
-            posicion_coincidente = 0
+            posicion_coincidente = patron_encontrar._datastore.offset
 
-    posiciones[posicion_coincidente_ref] = tamano_patron_encontrar
+    posiciones[posicion_coincidente_ref - tamano_patron_encontrar + 1] = tamano_patron_encontrar
     
     logger_cagada.debug("las posiciones finales son %s" % posiciones)
     logger_cagada.debug("los matches completos son %s" % matches_completos)
