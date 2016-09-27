@@ -781,8 +781,10 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     
     posicion_coincidente = patron_encontrar._datastore.offset
     for pos_pat_ref in range(patron_referencia._datastore.offset, tamano_patron_referencia + patron_referencia._datastore.offset):
-        byte, bit = divmod(pos_pat_ref, 8)
-        byte1, bit1 = divmod(posicion_coincidente, 8)
+        byte = pos_pat_ref >> 3
+        bit = pos_pat_ref & 7
+        byte1 = posicion_coincidente >> 3
+        bit1 = posicion_coincidente & 7
         logger_cagada.debug("byte %u bit %u de %u byte1 %u bit1 %u de %u" % (byte, bit, pos_pat_ref, byte1, bit1, posicion_coincidente))
         logger_cagada.debug("loq c compara %s,%s", (patron_referencia._datastore._rawarray[byte] & (128 >> bit)) , (patron_encontrar._datastore._rawarray[byte1] & (128 >> bit1)))
         if((not (patron_referencia_raw[byte] & (128 >> bit))) == (not (patron_encontrar_raw[byte1] & (128 >> bit1)))):
