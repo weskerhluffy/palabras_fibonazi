@@ -807,7 +807,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
             if(bitch_actual_patron_ref == (not (patron_encontrar_raw[byte1] & (128 >> bit1)))):
                 posiciones_tmp[pos_pat_ref_inicio] += 1
                 if(posiciones_tmp[pos_pat_ref_inicio] == tamano_patron_encontrar_con_offset):
-                    logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u" % (pos_pat_ref_inicio))
+                    logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u, tamanios %u %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref_inicio], tamano_patron_encontrar_con_offset))
                     matches_completos[pos_pat_ref_inicio - patron_referencia_offset] = True
                     posiciones_a_borrar.append(pos_pat_ref_inicio)
                     if(corto_circuito):
@@ -818,6 +818,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
                 posiciones_a_borrar.append(pos_pat_ref_inicio)
             
+        if(corto_circuito and matches_completos):
+            break
         logger_cagada.debug("celso pina %s" % posiciones_tmp)
         for pos_a_bor in posiciones_a_borrar:
             logger_cagada.debug("baila con el rebelde %u" % pos_a_bor)
@@ -839,7 +841,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     logger_cagada.debug("los matches completos son %s" % matches_completos)
     
     if(not pegate):
-        assert(len(matches_completos) == 1 or len(matches_completos) == 0)
+        assert len(matches_completos) == 1 or len(matches_completos) == 0, "los matches son %s, los patrones %s y %s" % (matches_completos, BitArray(list(reversed(patron_referencia))).bin, BitArray(list(reversed(patron_encontrar))).bin)
     else:
         assert(len(matches_completos) == pegate)
     
