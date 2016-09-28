@@ -771,6 +771,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     patron_encontrar_offset = 0
     patron_referencia_raw = []
     patron_encontrar_raw = []
+    posiciones_tmp = {}
     
     tamano_patron_referencia = len(patron_referencia)
     tamano_patron_encontrar = len(patron_encontrar)
@@ -784,50 +785,54 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     patron_encontrar_offset = patron_encontrar._datastore.offset
     
 
+    primer_bitch_patron_enc = not(patron_encontrar_raw[0] & (128 >> patron_encontrar_offset))
 
     for pos_pat_ref in range(patron_referencia_offset, tamano_patron_referencia + patron_referencia_offset):
         posiciones_a_borrar = array.array("I")
 
-        for pos_pat_ref_inicio, offset_valido in posiciones.items():
-            pos_pat_ref_act = pos_pat_ref_inicio + offset_valido + patron_referencia_offset
-            pos_pat_enc = offset_valido + patron_encontrar_offset
+        byte = pos_pat_ref >> 3
+        bit = pos_pat_ref & 7
+        
+        bitch_actual_patron_ref = not (patron_referencia_raw[byte] & (128 >> bit))
+        tamano_patron_encontrar_con_offset = tamano_patron_encontrar + patron_encontrar_offset
+        
+        for pos_pat_ref_inicio, offset_valido in posiciones_tmp.items():
             
-            if(offset_valido == tamano_patron_encontrar):
-                logger_cagada.debug("que calor que calor ya se encontro el patron completo empezando en %u" % (pos_pat_ref_inicio))
-                matches_completos[pos_pat_ref_inicio] = True
-                continue
+            assert offset_valido < tamano_patron_encontrar_con_offset, "el offset valido %u y el tam encontra %u" % (offset_valido, tamano_patron_encontrar)
 
-            logger_cagada.debug("el patron que inicia en %u siwe vivo %u(%u) contra %u(%u)" % (pos_pat_ref_inicio, patron_referencia[pos_pat_ref_act - patron_referencia_offset], pos_pat_ref_act, patron_encontrar[pos_pat_enc - patron_encontrar_offset], pos_pat_enc))
+            logger_cagada.debug("el patron que inicia en %u siwe vivo %u(%u) contra %u(%u)" % (pos_pat_ref_inicio, patron_referencia[pos_pat_ref - patron_referencia_offset], pos_pat_ref, patron_encontrar[offset_valido - patron_encontrar_offset], offset_valido))
             
-            byte = pos_pat_ref_act >> 3
-            bit = pos_pat_ref_act & 7
-            byte1 = pos_pat_enc >> 3
-            bit1 = pos_pat_enc & 7
-            if((not (patron_referencia_raw[byte] & (128 >> bit))) == (not (patron_encontrar_raw[byte1] & (128 >> bit1)))):
-                posiciones[pos_pat_ref_inicio] += 1
-                if(posiciones[pos_pat_ref_inicio] == tamano_patron_encontrar):
+            byte1 = offset_valido >> 3
+            bit1 = offset_valido & 7
+            if(bitch_actual_patron_ref == (not (patron_encontrar_raw[byte1] & (128 >> bit1)))):
+                posiciones_tmp[pos_pat_ref_inicio] += 1
+                if(posiciones_tmp[pos_pat_ref_inicio] == tamano_patron_encontrar_con_offset):
                     logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u" % (pos_pat_ref_inicio))
-                    matches_completos[pos_pat_ref_inicio] = True
+                    matches_completos[pos_pat_ref_inicio - patron_referencia_offset] = True
+                    posiciones_a_borrar.append(pos_pat_ref_inicio)
                     if(corto_circuito):
                         logger_cagada.debug("corto circuito activado asi q se sale")
                         break
-                logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones[pos_pat_ref_inicio]))
+                logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref_inicio]))
             else:
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
                 posiciones_a_borrar.append(pos_pat_ref_inicio)
             
-        logger_cagada.debug("celso pina %s" % posiciones)
+        logger_cagada.debug("celso pina %s" % posiciones_tmp)
         for pos_a_bor in posiciones_a_borrar:
             logger_cagada.debug("baila con el rebelde %u" % pos_a_bor)
-            del posiciones[pos_a_bor]
+            del posiciones_tmp[pos_a_bor]
         
         logger_cagada.debug("mierda pos pat ref %u" % pos_pat_ref)
-        byte = pos_pat_ref >> 3
-        bit = pos_pat_ref & 7
-        if((not (patron_referencia_raw[byte] & (128 >> bit))) == (not(patron_encontrar_raw[0] & (128 >> patron_encontrar_offset)))):
-            posiciones[pos_pat_ref - patron_referencia_offset] = 1
-            logger_cagada.debug("se inicia cagada %u(%u) vs %u(%u)" % (patron_referencia[pos_pat_ref - patron_referencia_offset], pos_pat_ref - patron_referencia_offset, patron_encontrar[0], 0))
+        if((not (patron_referencia_raw[byte] & (128 >> bit))) == primer_bitch_patron_enc):
+            posiciones_tmp[pos_pat_ref] = patron_encontrar_offset + 1
+            logger_cagada.debug("se inicia cagada %u(%u) vs %u(%u)" % (patron_referencia[pos_pat_ref - patron_referencia_offset], pos_pat_ref , patron_encontrar[0], patron_encontrar_offset))
  
+    for posicion, tam_match in posiciones_tmp.items():
+        posiciones[posicion - patron_referencia_offset] = tam_match
+    
+    for posicion in matches_completos.keys():
+        posiciones[posicion] = tamano_patron_encontrar
 
     logger_cagada.debug("las posiciones finales son %s" % posiciones)
     logger_cagada.debug("los matches completos son %s" % matches_completos)
