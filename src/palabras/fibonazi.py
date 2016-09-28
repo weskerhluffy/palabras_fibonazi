@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-#nivel_log = logging.DEBUG
+# nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -828,8 +828,9 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
             posiciones_tmp[pos_pat_ref] = patron_encontrar_offset + 1
             logger_cagada.debug("se inicia cagada %u(%u) vs %u(%u)" % (patron_referencia[pos_pat_ref - patron_referencia_offset], pos_pat_ref , patron_encontrar[0], patron_encontrar_offset))
  
-    for posicion, tam_match in posiciones_tmp.items():
-        posiciones[posicion - patron_referencia_offset] = tam_match
+    if(nivel_log==logging.DEBUG):
+        for posicion, tam_match in posiciones_tmp.items():
+            posiciones[posicion - patron_referencia_offset] = tam_match
     
     for posicion in matches_completos.keys():
         posiciones[posicion] = tamano_patron_encontrar
@@ -1025,6 +1026,23 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
 
     assert(num_repeticiones)
 
+    if(nivel_log == logging.DEBUG):
+        posiciones_patron = {}
+        posiciones_match_completo = {}
+        if(segunda_aparicion_doble):
+            pegate = 2
+        else:
+            pegate = 1
+        fibonazi_compara_patrones(patrones_base[idx_primera_aparicion_patron + 1], patron_referencia, posiciones_patron, posiciones_match_completo, pegate=pegate, corto_circuito=False)
+        assert((segunda_aparicion_doble and len(posiciones_match_completo) == 2) or (not segunda_aparicion_doble and len(posiciones_match_completo) == 1))
+    
+        if(idx_patrones_base_donde_buscar < 25):
+            posiciones_patron = {}
+            posiciones_match_completo = {}
+            pegate = num_repeticiones
+            fibonazi_compara_patrones(patrones_base[idx_patrones_base_donde_buscar], patron_referencia, posiciones_patron, posiciones_match_completo, pegate=pegate, corto_circuito=False)
+            assert(len(posiciones_match_completo) == pegate)
+    
     return num_repeticiones
 
 def fibonazi_genere_todos_los_pedazos(palabrota, tam_ini=1, tam_fin=100000):
