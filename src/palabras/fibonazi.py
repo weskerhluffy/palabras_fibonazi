@@ -763,7 +763,7 @@ def caca_ordena_dick_valor(dick):
     return sorted(dick.items(), key=lambda cosa: operator.itemgetter(cosa[1], cosa[0]))
 
 # @profile
-def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos, corto_circuito=False, pegate=0):
+def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos, corto_circuito=True, pegate=0):
     tamano_patron_referencia = 0
     tamano_patron_encontrar = 0
     posicion_coincidente = 0
