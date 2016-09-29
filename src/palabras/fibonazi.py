@@ -845,7 +845,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     if(not pegate):
         assert len(matches_completos) == 1 or len(matches_completos) == 0, "los matches son %s, los patrones %s y %s" % (matches_completos, BitArray(list(reversed(patron_referencia))).bin, BitArray(list(reversed(patron_encontrar))).bin)
     else:
-        assert len(matches_completos) == pegate,"los matches son %s, lo esperado %u los patrones %s y %s" % (matches_completos, pegate,BitArray(list(reversed(patron_referencia))).bin, BitArray(list(reversed(patron_encontrar))).bin)
+        assert len(matches_completos) == pegate, "los matches son %s, lo esperado %u los patrones %s y %s" % (matches_completos, pegate, BitArray(list(reversed(patron_referencia))).bin, BitArray(list(reversed(patron_encontrar))).bin)
     
 def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
     tamano_palabra_actual = 0
@@ -1020,6 +1020,8 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
 
     logger_cagada.debug("la primera aparicion en %u, se busca en %u, diferencia %u" % (idx_primera_aparicion_patron, idx_patrones_base_donde_buscar, separacion_primera_aparicion_y_donde_buscar))
 
+    if(separacion_primera_aparicion_y_donde_buscar < 0):
+        return 0
     assert(separacion_primera_aparicion_y_donde_buscar >= 0)
     
     if(not segunda_aparicion_doble):
@@ -1037,7 +1039,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
 
     assert(num_repeticiones)
 
-    if(nivel_log == logging.DEBUG and len(patron_referencia)!=1):
+    if(nivel_log == logging.DEBUG and len(patron_referencia) != 1):
         posiciones_patron = {}
         posiciones_match_completo = {}
         if(segunda_aparicion_doble):
