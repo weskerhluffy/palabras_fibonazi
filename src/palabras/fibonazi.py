@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-nivel_log = logging.DEBUG
+#nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -979,9 +979,9 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
             
             tam_posiciones_match_completo = len(posiciones_match_completo)
             
-            if(nivel_log == logging.DEBUG and not tam_posiciones_match_completo):
-                return (300000, False)
-           
+            if(not tam_posiciones_match_completo):
+                return(-1, False)
+            
             assert(tam_posiciones_match_completo == 1)
             
             posiciones_match_completo_llave = caca_ordena_dick_llave(posiciones_match_completo)
@@ -1014,14 +1014,16 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
     
     (idx_primera_aparicion_patron, segunda_aparicion_doble) = fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base)
     
+    if(idx_primera_aparicion_patron == -1):
+        return 0
+    
     separacion_primera_aparicion_y_donde_buscar = idx_patrones_base_donde_buscar - idx_primera_aparicion_patron
-    if(nivel_log == logging.DEBUG and separacion_primera_aparicion_y_donde_buscar < 0):
+    
+    if(separacion_primera_aparicion_y_donde_buscar<0):
         return 0
 
     logger_cagada.debug("la primera aparicion en %u, se busca en %u, diferencia %u" % (idx_primera_aparicion_patron, idx_patrones_base_donde_buscar, separacion_primera_aparicion_y_donde_buscar))
 
-    if(separacion_primera_aparicion_y_donde_buscar < 0):
-        return 0
     assert(separacion_primera_aparicion_y_donde_buscar >= 0)
     
     if(not segunda_aparicion_doble):
