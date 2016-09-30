@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-#nivel_log = logging.DEBUG
+nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -96,7 +96,8 @@ class ConstByteStore(object):
         logger_cagada.debug("q vergas es offset %s" % (self.offset))
         logger_cagada.debug("la pos deseada es %s" % (pos))
         byte, bit = divmod(self.offset + pos, 8)
-        return bool(self._rawarray[byte] & (128 >> bit))
+        logger_cagada.debug("byte %u bit %u" % (byte, bit))
+        return bool(self._rawarray[byte] & (1 << bit))
 
     def getbyte(self, pos):
         return self._rawarray[pos]
@@ -119,7 +120,11 @@ class ConstByteStore(object):
     def _appendstore(self, store):
         if not store.bitlength:
             return
+        
+        logger_cagada.debug("store orig %s" % store._rawarray)
+        logger_cagada.debug("chorando offset %u bitchlen %u %u" % (self.offset, self.bitlength, (self.offset + self.bitlength) % 8))
         store = offsetcopy(store, (self.offset + self.bitlength) % 8)
+        logger_cagada.debug("recordando %s" % store._rawarray)
         if store.offset:
             joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
                        (store.getbyte(0) & (255 >> store.offset)))
@@ -522,16 +527,19 @@ class Bits(object):
         logger_cagada.debug("convirtiendo la cadena %s a bytearray? " % binstring)
         binstring = tidy_input_string(binstring)
         binstring = binstring.replace('0b', '')
+        binstring = ''.join(reversed(binstring))
+        logger_cagada.debug("la cadena invertida %s" % binstring)
         self._setbin_unsafe(binstring)
 
     def _setbin_unsafe(self, binstring):
+        logger_cagada.debug("la cadenita %s" % binstring)
         length = len(binstring)
-        boundary = ((length + 7) // 8) * 8
-        padded_binstring = binstring + '0' * (boundary - length)\
-                           if len(binstring) < boundary else binstring
+        padded_binstring = binstring 
         try:
+            logger_cagada.debug("el primer pedazo de mierda %s" % padded_binstring[0:8])
             bytelist = [int(padded_binstring[x:x + 8], 2)
                         for x in xrange(0, len(padded_binstring), 8)]
+            logger_cagada.debug("el puto bytelist %s" % bytelist)
         except ValueError:
             raise CreationError("Invalid character in bin initialiser {0}.", binstring)
         logger_cagada.debug("la lista de bytes %s" % bytelist)
@@ -1019,7 +1027,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
     
     separacion_primera_aparicion_y_donde_buscar = idx_patrones_base_donde_buscar - idx_primera_aparicion_patron
     
-    if(separacion_primera_aparicion_y_donde_buscar<0):
+    if(separacion_primera_aparicion_y_donde_buscar < 0):
         return 0
 
     logger_cagada.debug("la primera aparicion en %u, se busca en %u, diferencia %u" % (idx_primera_aparicion_patron, idx_patrones_base_donde_buscar, separacion_primera_aparicion_y_donde_buscar))
@@ -1096,7 +1104,13 @@ if __name__ == '__main__':
     parser.add_argument("-n", "--nadena", help="i rompe tu camisa", action="store_true")
 
     args = parser.parse_args()
+    
+    patron_encontrar = BitArray(bin="101")
+    patron_encontrar = BitArray(bin="10000000001")
+    patron_encontrar += BitArray(bin="100111101")
+    logger_cagada.debug("danza kuduro %s %s" % (patron_encontrar.bin, patron_encontrar[2]))
 
+    sys.exit()
     fibonazi_genera_palabras_patron(palabras_patron, tam_palabra_a_idx_patron)
 
 
