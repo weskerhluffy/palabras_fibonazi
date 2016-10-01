@@ -96,8 +96,7 @@ class ConstByteStore(object):
         logger_cagada.debug("q vergas es offset %s" % (self.offset))
         logger_cagada.debug("la pos deseada es %s" % (pos))
         byte, bit = divmod(self.offset + pos, 8)
-        logger_cagada.debug("byte %u bit %u" % (byte, bit))
-        return bool(self._rawarray[byte] & (1 << bit))
+        return bool(self._rawarray[byte] & (128 >> bit))
 
     def getbyte(self, pos):
         return self._rawarray[pos]
@@ -120,11 +119,10 @@ class ConstByteStore(object):
     def _appendstore(self, store):
         if not store.bitlength:
             return
-        
-        logger_cagada.debug("store orig %s" % store._rawarray)
-        logger_cagada.debug("chorando offset %u bitchlen %u %u" % (self.offset, self.bitlength, (self.offset + self.bitlength) % 8))
+        logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(str(x) for x in store._rawarray)))
+        logger_cagada.debug("we wont pre offset %u bitchlen %u" % (self.offset, self.bitlength))
         store = offsetcopy(store, (self.offset + self.bitlength) % 8)
-        logger_cagada.debug("recordando %s" % store._rawarray)
+        logger_cagada.debug("your drees %s" % (",".join(str(x) for x in store._rawarray)))
         if store.offset:
             joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
                        (store.getbyte(0) & (255 >> store.offset)))
@@ -132,6 +130,26 @@ class ConstByteStore(object):
             self._rawarray.extend(store._rawarray[1:])
         else:
             self._rawarray.extend(store._rawarray)
+        self.bitlength += store.bitlength
+
+    def _prependstore(self, store):
+        if not store.bitlength:
+            return
+        # Set the offset of copy of store so that it's final byte
+        # ends in a position that matches the offset of self,
+        # then join self on to the end of it.
+        store = offsetcopy(store, (self.offset - store.bitlength) % 8)
+        assert (store.offset + store.bitlength) % 8 == self.offset % 8
+        bit_offset = self.offset % 8
+        if bit_offset:
+            # first do the byte with the join.
+            store.setbyte(-1, (store.getbyte(-1) & (255 ^ (255 >> bit_offset)) | \
+                               (self._rawarray[self.byteoffset] & (255 >> bit_offset))))
+            store._rawarray.extend(self._rawarray[self.byteoffset + 1: self.byteoffset + self.bytelength])
+        else:
+            store._rawarray.extend(self._rawarray[self.byteoffset: self.byteoffset + self.bytelength])
+        self._rawarray = store._rawarray
+        self.offset = store.offset
         self.bitlength += store.bitlength
 
     @property
@@ -527,19 +545,17 @@ class Bits(object):
         logger_cagada.debug("convirtiendo la cadena %s a bytearray? " % binstring)
         binstring = tidy_input_string(binstring)
         binstring = binstring.replace('0b', '')
-        binstring = ''.join(reversed(binstring))
-        logger_cagada.debug("la cadena invertida %s" % binstring)
         self._setbin_unsafe(binstring)
 
     def _setbin_unsafe(self, binstring):
-        logger_cagada.debug("la cadenita %s" % binstring)
         length = len(binstring)
-        padded_binstring = binstring 
+        boundary = ((length + 7) // 8) * 8
+        padded_binstring = '0' * (boundary - length) + binstring \
+                           if len(binstring) < boundary else binstring
+        logger_cagada.debug("evil all of the t %s" % padded_binstring)
         try:
-            logger_cagada.debug("el primer pedazo de mierda %s" % padded_binstring[0:8])
             bytelist = [int(padded_binstring[x:x + 8], 2)
                         for x in xrange(0, len(padded_binstring), 8)]
-            logger_cagada.debug("el puto bytelist %s" % bytelist)
         except ValueError:
             raise CreationError("Invalid character in bin initialiser {0}.", binstring)
         logger_cagada.debug("la lista de bytes %s" % bytelist)
@@ -623,6 +639,10 @@ class Bits(object):
 
     def _append(self, bs):
         self._datastore._appendstore(bs._datastore)
+
+    def _prepend(self, bs):
+        """Prepend a bitstring to the current bitstring."""
+        self._datastore._prependstore(bs._datastore)
 
     def _reverse(self):
         n = [BYTE_REVERSAL_DICT[b] for b in self._datastore.rawbytes]
@@ -1105,12 +1125,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    patron_encontrar = BitArray(bin="101")
-    patron_encontrar = BitArray(bin="10000000001")
-    patron_encontrar += BitArray(bin="100111101")
-    logger_cagada.debug("danza kuduro %s %s" % (patron_encontrar.bin, patron_encontrar[2]))
-
+    a = BitArray(bin= "111011111111110")
+    a += BitArray(bin="10101000001")
+    
+    logger_cagada.debug("la mierda %s" % a)
+    
     sys.exit()
+
     fibonazi_genera_palabras_patron(palabras_patron, tam_palabra_a_idx_patron)
 
 
