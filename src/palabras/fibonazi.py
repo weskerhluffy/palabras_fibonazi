@@ -119,10 +119,10 @@ class ConstByteStore(object):
     def _appendstore(self, store):
         if not store.bitlength:
             return
-        logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(str(x) for x in store._rawarray)))
+        logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store._rawarray)))
         logger_cagada.debug("we wont pre offset %u bitchlen %u" % (self.offset, self.bitlength))
         store = offsetcopy(store, (self.offset + self.bitlength) % 8)
-        logger_cagada.debug("your drees %s" % (",".join(str(x) for x in store._rawarray)))
+        logger_cagada.debug("your drees %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store._rawarray)))
         if store.offset:
             joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
                        (store.getbyte(0) & (255 >> store.offset)))
@@ -170,34 +170,30 @@ def offsetcopy(s, newoffset):
     if not s.bitlength:
         return copy.copy(s)
     else:
-        if newoffset == s.offset % 8:
-            return ByteStore(s.getbyteslice(s.byteoffset, s.byteoffset + s.bytelength), s.bitlength, newoffset)
+        restante_a_la_der = s.bitlength % 8
         newdata = []
         d = s._rawarray
-        assert newoffset != s.offset % 8
-        if newoffset < s.offset % 8:
-            shiftleft = s.offset % 8 - newoffset
-            for x in range(s.byteoffset, s.byteoffset + s.bytelength - 1):
-                newdata.append(((d[x] << shiftleft) & 0xff) + \
-                               (d[x + 1] >> (8 - shiftleft)))
-            bits_in_last_byte = (s.offset + s.bitlength) % 8
-            if not bits_in_last_byte:
-                bits_in_last_byte = 8
-            if bits_in_last_byte > shiftleft:
-                newdata.append((d[s.byteoffset + s.bytelength - 1] << shiftleft) & 0xff)
-        else:  # newoffset > s._offset % 8
-            shiftright = newoffset - s.offset % 8
-            newdata.append(s.getbyte(0) >> shiftright)
-            for x in range(s.byteoffset + 1, s.byteoffset + s.bytelength):
-                newdata.append(((d[x - 1] << (8 - shiftright)) & 0xff) + \
-                               (d[x] >> shiftright))
-            bits_in_last_byte = (s.offset + s.bitlength) % 8
-            if not bits_in_last_byte:
-                bits_in_last_byte = 8
-            if bits_in_last_byte + shiftright > 8:
-                newdata.append((d[s.byteoffset + s.bytelength - 1] << (8 - shiftright)) & 0xff)
-        new_s = ByteStore(bytearray(newdata), s.bitlength, newoffset)
-        assert new_s.offset == newoffset
+#        if newoffset <= restante_a_la_der:
+#            shiftleft = s.offset % 8 - newoffset
+#            for x in range(s.byteoffset, s.byteoffset + s.bytelength - 1):
+#                newdata.append(((d[x] << shiftleft) & 0xff) + \
+#                               (d[x + 1] >> (8 - shiftleft)))
+#            bits_in_last_byte = (s.offset + s.bitlength) % 8
+#            if not bits_in_last_byte:
+#                bits_in_last_byte = 8
+#            if bits_in_last_byte > shiftleft:
+#                newdata.append((d[s.byteoffset + s.bytelength - 1] << shiftleft) & 0xff)
+#        else:  # newoffset > s._offset % 8
+        shiftright = newoffset
+        newdata.append(s.getbyte(0) >> shiftright)
+        logger_cagada.debug("l 1er byte %s q c recorre %u, resultado %s" % (bin(s.getbyte(0)), shiftright, newdata[-1]))
+        for x in range(1, s.bytelength):
+            newdata.append(((d[x - 1] << (8 - shiftright)) & 0xff) + \
+                           (d[x] >> shiftright))
+        bits_in_last_byte = newoffset - restante_a_la_der if restante_a_la_der < newoffset else 0
+        if bits_in_last_byte:
+            newdata.append((d[s.bytelength - 1] << (8 - shiftright)) & 0xff)
+        new_s = ByteStore(bytearray(newdata), s.bitlength, 0)
         return new_s
 
 
@@ -553,9 +549,12 @@ class Bits(object):
         padded_binstring = '0' * (boundary - length) + binstring \
                            if len(binstring) < boundary else binstring
         logger_cagada.debug("evil all of the t %s" % padded_binstring)
+        tam_padded_str = len(padded_binstring)
+        logger_cagada.debug("primer cadena para el bitch %s " % padded_binstring[8:16])
+        assert not tam_padded_str % 8
         try:
-            bytelist = [int(padded_binstring[x:x + 8], 2)
-                        for x in xrange(0, len(padded_binstring), 8)]
+            bytelist = [int(padded_binstring[x - 8 :x], 2)
+                        for x in xrange(len(padded_binstring) , 0, -8)]
         except ValueError:
             raise CreationError("Invalid character in bin initialiser {0}.", binstring)
         logger_cagada.debug("la lista de bytes %s" % bytelist)
@@ -1125,7 +1124,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    a = BitArray(bin= "111011111111110")
+    a = BitArray(bin="111011111111110")
     a += BitArray(bin="10101000001")
     
     logger_cagada.debug("la mierda %s" % a)
