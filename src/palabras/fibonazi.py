@@ -170,29 +170,34 @@ def offsetcopy(s, newoffset):
     if not s.bitlength:
         return copy.copy(s)
     else:
-        restante_a_la_der = s.bitlength % 8
         newdata = []
         d = s._rawarray
 #        if newoffset <= restante_a_la_der:
-#            shiftleft = s.offset % 8 - newoffset
-#            for x in range(s.byteoffset, s.byteoffset + s.bytelength - 1):
-#                newdata.append(((d[x] << shiftleft) & 0xff) + \
-#                               (d[x + 1] >> (8 - shiftleft)))
-#            bits_in_last_byte = (s.offset + s.bitlength) % 8
-#            if not bits_in_last_byte:
-#                bits_in_last_byte = 8
-#            if bits_in_last_byte > shiftleft:
-#                newdata.append((d[s.byteoffset + s.bytelength - 1] << shiftleft) & 0xff)
+        shiftleft = s.offset % 8 - newoffset
+	bits_libres_a_la_izq= 8 - s.bitlength % 8
+        for x in range(s.byteoffset, s.byteoffset + s.bytelength - 1):
+            newdata.append(((d[x] << shiftleft) & 0xff) + \
+                           (d[x + 1] >> (8 - shiftleft)))
+        bits_in_last_byte = (s.offset + s.bitlength) % 8
+        if not bits_in_last_byte:
+            bits_in_last_byte = 8
+        if bits_in_last_byte > shiftleft:
+            newdata.append((d[s.byteoffset + s.bytelength - 1] << shiftleft) & 0xff)
 #        else:  # newoffset > s._offset % 8
-        shiftright = newoffset
-        newdata.append(s.getbyte(0) >> shiftright)
-        logger_cagada.debug("l 1er byte %s q c recorre %u, resultado %s" % (bin(s.getbyte(0)), shiftright, newdata[-1]))
-        for x in range(1, s.bytelength):
-            newdata.append(((d[x - 1] << (8 - shiftright)) & 0xff) + \
-                           (d[x] >> shiftright))
-        bits_in_last_byte = newoffset - restante_a_la_der if restante_a_la_der < newoffset else 0
-        if bits_in_last_byte:
-            newdata.append((d[s.bytelength - 1] << (8 - shiftright)) & 0xff)
+
+#        logger_cagada.debug("nuevo offs %u y rest a la izq %u"%(newoffset, s.bitlength % 8))
+#        shiftright = newoffset
+#        newdata.append(s.getbyte(0) << (8-shiftright))
+#        logger_cagada.debug("l 1er byte %s q c recorre %u, resultado %s" % (bin(s.getbyte(0)), shiftright, newdata[-1]))
+#        for x in range(0, len(d)-1):
+#            logger_cagada.debug("la parte de enfrente %s la de atras %s"%(d[x + 1] << (8 - shiftright),d[x] >> shiftright))
+#            newdata.append(((d[x + 1] << (8 - shiftright)) & 0xff) + \
+#                           (d[x] >> shiftright))
+#        newdata.append(d[-1] >> shiftright)
+
+#        bits_in_last_byte = newoffset - restante_a_la_der if restante_a_la_der < newoffset else 0
+#        if bits_in_last_byte:
+#            newdata.append((d[s.bytelength - 1] << (8 - shiftright)) & 0xff)
         new_s = ByteStore(bytearray(newdata), s.bitlength, 0)
         return new_s
 
