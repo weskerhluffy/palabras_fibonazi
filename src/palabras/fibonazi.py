@@ -173,16 +173,17 @@ def offsetcopy(s, newoffset):
         newdata = []
         d = s._rawarray
 #        if newoffset <= restante_a_la_der:
-        shiftleft = s.offset % 8 - newoffset
-	bits_libres_a_la_izq= 8 - s.bitlength % 8
-        for x in range(s.byteoffset, s.byteoffset + s.bytelength - 1):
+        shiftleft = newoffset
+        bits_libres_a_la_izq = 8 - s.bitlength % 8
+        newdata.append(s.getbyte(0) << (shiftleft) & 0xff)
+        logger_cagada.debug("se añadio al inicio %s" % (bin(newdata[-1])))
+        for x in range(1, s.bytelength):
             newdata.append(((d[x] << shiftleft) & 0xff) + \
-                           (d[x + 1] >> (8 - shiftleft)))
-        bits_in_last_byte = (s.offset + s.bitlength) % 8
-        if not bits_in_last_byte:
-            bits_in_last_byte = 8
-        if bits_in_last_byte > shiftleft:
-            newdata.append((d[s.byteoffset + s.bytelength - 1] << shiftleft) & 0xff)
+                           (d[x - 1] >> (8 - shiftleft)))
+        if shiftleft > bits_libres_a_la_izq:
+            newdata.append(d[-1] >> ((s.bitlength % 8) - (shiftleft - bits_libres_a_la_izq)) & 0xff)
+            logger_cagada.debug("se añadio al final (por salir una cabecilla) %s" % (bin(newdata[-1])))
+        
 #        else:  # newoffset > s._offset % 8
 
 #        logger_cagada.debug("nuevo offs %u y rest a la izq %u"%(newoffset, s.bitlength % 8))
@@ -1130,7 +1131,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     a = BitArray(bin="111011111111110")
-    a += BitArray(bin="10101000001")
+    a += BitArray(bin="101010 00001")
     
     logger_cagada.debug("la mierda %s" % a)
     
