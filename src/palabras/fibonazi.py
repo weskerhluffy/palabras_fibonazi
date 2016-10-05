@@ -139,14 +139,21 @@ def offsetcopy(s, newoffset):
 #        if newoffset <= restante_a_la_der:
         shiftleft = newoffset
         bits_libres_a_la_izq = 8 - s.bitlength % 8
-        logger_cagada.debug("el byte original inicial %s" % (bin(s.getbyte(0))))
+        if(bits_libres_a_la_izq == 8):
+            bits_libres_a_la_izq = 0
+        logger_cagada.debug("los bitchs libres a la izq %u" % (bits_libres_a_la_izq))
+        logger_cagada.debug("el byte original inicial %s con bytelen %u" % (bin(s.getbyte(0)), s.bytelength))
         newdata.append(s.getbyte(0) << (shiftleft) & 0xff)
         logger_cagada.debug("se añadio al inicio %s" % (bin(newdata[-1])))
         for x in range(1, s.bytelength):
             newdata.append(((d[x] << shiftleft) & 0xff) + \
                            (d[x - 1] >> (8 - shiftleft)))
+            logger_cagada.debug("añadiendo byte %s de byte orig %u" % (bin(newdata[-1]), x))
         if shiftleft > bits_libres_a_la_izq:
-            newdata.append(d[-1] >> ((s.bitlength % 8) - (shiftleft - bits_libres_a_la_izq)) & 0xff)
+            offset_ultimo_byte = ((s.bitlength % 8) - (shiftleft - bits_libres_a_la_izq))
+            if(offset_ultimo_byte < 0):
+                offset_ultimo_byte = 8 - shiftleft
+            newdata.append(d[-1] >> offset_ultimo_byte & 0xff)
             logger_cagada.debug("se añadio al final (por salir una cabecilla) %s" % (bin(newdata[-1])))
         
 #        else:  # newoffset > s._offset % 8
@@ -400,17 +407,22 @@ class Bits(object):
         logger_cagada.debug("el tam orig de bit %u" % tam_orig)
         logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in parte_izq_ds._rawarray)))
         logger_cagada.debug("we wont pre offset %u bitchlen %u" % (parte_izq_ds.offset, parte_izq_ds.bitlength))
-        store1 = offsetcopy(parte_izq_ds, parte_der_ds.bitlength % 8)
-        logger_cagada.debug("your drees %s se recorrio %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store1._rawarray), parte_der_ds.bitlength % 8))
-        logger_cagada.debug("uniendo ultimo bit de der %s con primer bit de izq %s" % (bin(parte_der_ds._rawarray[-1]), bin(store1._rawarray[0])))
-        parte_der_ds._rawarray[-1] |= store1._rawarray[0]
-#            joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
-#                       (store.getbyte(0) & (255 >> store.offset)))
-        parte_der_ds._rawarray.extend(store1._rawarray[1:])
+        
+        if(parte_der_ds.bitlength % 8):
+            store1 = offsetcopy(parte_izq_ds, parte_der_ds.bitlength % 8)
+            logger_cagada.debug("your drees %s se recorrio %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store1._rawarray), parte_der_ds.bitlength % 8))
+            logger_cagada.debug("uniendo ultimo bit de der %s con primer bit de izq %s" % (bin(parte_der_ds._rawarray[-1]), bin(store1._rawarray[0])))
+            parte_der_ds._rawarray[-1] |= store1._rawarray[0]
+    #            joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
+    #                       (store.getbyte(0) & (255 >> store.offset)))
+            parte_der_ds._rawarray.extend(store1._rawarray[1:])
+        else:
+            parte_der_ds._rawarray.extend(parte_izq_ds._rawarray)
+        
         parte_der_ds.bitlength += tam_orig
         parte_der_ds.bytelen = (parte_der_ds.bitlength + 7) // 8
         logger_cagada.debug("el nuevo bitch len %u se le sumo %u, el original era %u" % (parte_der_ds.bitlength, tam_orig, parte_der_ds.bitlength - tam_orig))
-        logger_cagada.debug("la cadenita keda finalmente %s de bytelen %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in parte_der_ds._rawarray), parte_der_ds.bytelen))
+        logger_cagada.debug("la cadenita keda finalmente %s de bytelen %u" % (parte_der.bin, parte_der_ds.bytelen))
         return parte_der
 
     def __getitem__(self, key):
@@ -550,7 +562,7 @@ class Bits(object):
         if not length:
             return ''
         startbyte = 0
-        endbyte = self._datastore.bytelen - 1
+        endbyte = self._datastore.bytelength - 1
         b = bytearray(list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
         logger_cagada.debug("la cadena revertida %s" % b)
         try:
@@ -791,7 +803,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     tamano_patron_referencia = len(patron_referencia)
     tamano_patron_encontrar = len(patron_encontrar)
 
-    logger_cagada.debug("patron ref %s patron enc %s" % (BitArray(list(reversed(patron_referencia))).bin, BitArray(list(reversed(patron_encontrar))).bin))
+    logger_cagada.debug("patron ref %s patron enc %s" % (patron_referencia.bin, patron_encontrar.bin))
+    
     
     patron_referencia_raw = patron_referencia._datastore._rawarray
     patron_encontrar_raw = patron_encontrar._datastore._rawarray
@@ -801,6 +814,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     
 
     primer_bitch_patron_enc = not(patron_encontrar_raw[0] & (128 >> patron_encontrar_offset))
+    
+    sys.exit()
 
     for pos_pat_ref in range(patron_referencia_offset, tamano_patron_referencia + patron_referencia_offset):
         posiciones_a_borrar = array.array("I")
@@ -883,9 +898,6 @@ def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
         tamano_palabra_anterior_2 = tamano_palabra_anterior_1
         tamano_palabra_anterior_1 = tamano_palabra_actual
 
-    for palabra in palabras:
-        palabra.reverse()
-    
     logger_cagada.debug("el tamano final %s" % tamano_palabra_actual)
 
 def fibonazi_genera_sequencia_repeticiones(secuencia, generar_grande):
@@ -1112,12 +1124,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    a = BitArray(bin="111011111111110")
-    a += BitArray(bin="10101000001")
+ #   a = BitArray(bin="111011111111110")
+ #   a += BitArray(bin="10101000001")
     
-    logger_cagada.debug("la mierda %s" % a)
+ #   b = BitArray(bin="11100101")
+ #   b += BitArray(bin="101")
     
-    sys.exit()
+ #   logger_cagada.debug("la mierda %s" % b)
+    
 
     fibonazi_genera_palabras_patron(palabras_patron, tam_palabra_a_idx_patron)
 
@@ -1135,7 +1149,6 @@ if __name__ == '__main__':
     logger_cagada.debug("la seq no grande %s" % secuencia_no_grande)
     fibonazi_genera_sequencia_repeticiones(secuencia_peke, 0)
     
-
     for linea in sys.stdin:
         if(not linea.strip()):
             continue
@@ -1150,8 +1163,7 @@ if __name__ == '__main__':
             assert(linea.strip())
 #            patron_encontrar = BitArray(bin="01")
             patron_encontrar = BitArray(bin=linea.strip())
-            logger_cagada.debug("vinimos para liar %u %s" % (idx_a_buscar, patron_encontrar))
-            patron_encontrar.reverse()
+            logger_cagada.debug("vinimos para liar %u %s" % (idx_a_buscar, patron_encontrar.bin))
 
             num_repeticiones = fibonazi_main(patron_encontrar, palabras_patron, idx_a_buscar, secuencia_no_grande, secuencia_grande, secuencia_peke)
             print("Case #%u %u" % (linea_idx / 2 + 1, num_repeticiones))
