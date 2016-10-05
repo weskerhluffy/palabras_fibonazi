@@ -116,42 +116,6 @@ class ConstByteStore(object):
     def __copy__(self):
         return ByteStore(self._rawarray[:], self.bitlength, self.offset)
 
-    def _appendstore(self, store):
-        if not store.bitlength:
-            return
-        logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store._rawarray)))
-        logger_cagada.debug("we wont pre offset %u bitchlen %u" % (self.offset, self.bitlength))
-        store = offsetcopy(store, (self.offset + self.bitlength) % 8)
-        logger_cagada.debug("your drees %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store._rawarray)))
-        if store.offset:
-            joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
-                       (store.getbyte(0) & (255 >> store.offset)))
-            self._rawarray.append(joinval)
-            self._rawarray.extend(store._rawarray[1:])
-        else:
-            self._rawarray.extend(store._rawarray)
-        self.bitlength += store.bitlength
-
-    def _prependstore(self, store):
-        if not store.bitlength:
-            return
-        # Set the offset of copy of store so that it's final byte
-        # ends in a position that matches the offset of self,
-        # then join self on to the end of it.
-        store = offsetcopy(store, (self.offset - store.bitlength) % 8)
-        assert (store.offset + store.bitlength) % 8 == self.offset % 8
-        bit_offset = self.offset % 8
-        if bit_offset:
-            # first do the byte with the join.
-            store.setbyte(-1, (store.getbyte(-1) & (255 ^ (255 >> bit_offset)) | \
-                               (self._rawarray[self.byteoffset] & (255 >> bit_offset))))
-            store._rawarray.extend(self._rawarray[self.byteoffset + 1: self.byteoffset + self.bytelength])
-        else:
-            store._rawarray.extend(self._rawarray[self.byteoffset: self.byteoffset + self.bytelength])
-        self._rawarray = store._rawarray
-        self.offset = store.offset
-        self.bitlength += store.bitlength
-
     @property
     def byteoffset(self):
         return self.offset // 8
@@ -175,6 +139,7 @@ def offsetcopy(s, newoffset):
 #        if newoffset <= restante_a_la_der:
         shiftleft = newoffset
         bits_libres_a_la_izq = 8 - s.bitlength % 8
+        logger_cagada.debug("el byte original inicial %s" % (bin(s.getbyte(0))))
         newdata.append(s.getbyte(0) << (shiftleft) & 0xff)
         logger_cagada.debug("se añadio al inicio %s" % (bin(newdata[-1])))
         for x in range(1, s.bytelength):
@@ -423,15 +388,30 @@ class Bits(object):
         return self
     
     def __add__(self, bs):
-        bs = Bits(bs)
-        if bs.len <= self.len:
-            s = self._copy()
-            s._append(bs)
-        else:
-            s = bs._copy()
-            s = self.__class__(s)
-            s._prepend(self)
-        return s
+        parte_izq = self._copy()
+        parte_der = bs._copy()
+        
+        parte_izq_ds = parte_izq._datastore
+        parte_der_ds = parte_der._datastore
+        
+        tam_orig = parte_izq_ds.bitlength 
+        if not tam_orig:
+            return
+        logger_cagada.debug("el tam orig de bit %u" % tam_orig)
+        logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in parte_izq_ds._rawarray)))
+        logger_cagada.debug("we wont pre offset %u bitchlen %u" % (parte_izq_ds.offset, parte_izq_ds.bitlength))
+        store1 = offsetcopy(parte_izq_ds, parte_der_ds.bitlength % 8)
+        logger_cagada.debug("your drees %s se recorrio %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store1._rawarray), parte_der_ds.bitlength % 8))
+        logger_cagada.debug("uniendo ultimo bit de der %s con primer bit de izq %s" % (bin(parte_der_ds._rawarray[-1]), bin(store1._rawarray[0])))
+        parte_der_ds._rawarray[-1] |= store1._rawarray[0]
+#            joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
+#                       (store.getbyte(0) & (255 >> store.offset)))
+        parte_der_ds._rawarray.extend(store1._rawarray[1:])
+        parte_der_ds.bitlength += tam_orig
+        parte_der_ds.bytelen = (parte_der_ds.bitlength + 7) // 8
+        logger_cagada.debug("el nuevo bitch len %u se le sumo %u, el original era %u" % (parte_der_ds.bitlength, tam_orig, parte_der_ds.bitlength - tam_orig))
+        logger_cagada.debug("la cadenita keda finalmente %s de bytelen %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in parte_der_ds._rawarray), parte_der_ds.bytelen))
+        return parte_der
 
     def __getitem__(self, key):
         return self._datastore.getbit(key)
@@ -569,14 +549,16 @@ class Bits(object):
     def _readbin(self, length, start):
         if not length:
             return ''
-        startbyte, startoffset = divmod(start + self._offset, 8)
-        endbyte = (start + self._offset + length - 1) // 8
-        b = self._datastore.getbyteslice(startbyte, endbyte + 1)
+        startbyte = 0
+        endbyte = self._datastore.bytelen - 1
+        b = bytearray(list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
+        logger_cagada.debug("la cadena revertida %s" % b)
         try:
             c = "{:0{}b}".format(int(binascii.hexlify(b), 16), 8 * len(b))
         except TypeError:
             c = "{0:0{1}b}".format(int(binascii.hexlify(str(b)), 16), 8 * len(b))
-        return c[startoffset:startoffset + length]
+#        return c[startoffset:startoffset + length]
+        return c
 
     def _getbin(self):
         return self._readbin(self.len, 0)
@@ -1131,7 +1113,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     a = BitArray(bin="111011111111110")
-    a += BitArray(bin="101010 00001")
+    a += BitArray(bin="10101000001")
     
     logger_cagada.debug("la mierda %s" % a)
     
