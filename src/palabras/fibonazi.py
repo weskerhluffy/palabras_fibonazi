@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-nivel_log = logging.DEBUG
+#nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -813,50 +813,49 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     
     sobrante_patron_enc = len(patron_encontrar) % 8
     maskara_ultimo_byte_patron_enc = 0xff >> (8 - sobrante_patron_enc)
+    ultimo_idx_patron_enc = tamano_patron_encontrar - 1
     
-    for pos_pat_ref in range(0, tamano_patron_referencia - len(patron_encontrar) + 1):
-        posiciones_a_borrar = array.array("I")
+    for pos_pat_ref in range(0, tamano_patron_referencia - sobrante_patron_enc + 1):
 
         byte = pos_pat_ref >> 3
         bit = pos_pat_ref & 7
         
         byte_actual_patron_ref = (patron_referencia_raw[byte] >> bit) 
-        if((tamano_patron_referencia - pos_pat_ref) >= 8):
-            logger_cagada.debug("es q cual %s de %s" % (bin((patron_referencia[byte + 1] << (8 - bit)) & 0xff), bin(patron_referencia[byte + 1])))
-            byte_actual_patron_ref |= ((patron_referencia[byte + 1] << (8 - bit)) & 0xff)
+        if(byte < len(patron_referencia_raw) - 1):
+            logger_cagada.debug("es q cual %s de %s" % (bin((patron_referencia_raw[byte + 1] << (8 - bit)) & 0xff), bin(patron_referencia_raw[byte + 1])))
+            byte_actual_patron_ref |= ((patron_referencia_raw[byte + 1] << (8 - bit)) & 0xff)
 
         logger_cagada.debug("i aora solo tengo %s con byte %u y bit %u de %s" % (bin(byte_actual_patron_ref), byte, bit, bin(patron_referencia_raw[byte])))
         
-        for pos_pat_ref_inicio, offset_valido in posiciones_tmp.items():
+        for pos_pat_ref_inicio, offset_valido in posiciones_tmp.setdefault(pos_pat_ref, []):
             
             assert offset_valido < tamano_patron_encontrar, "el offset valido %u y el tam encontra %u" % (offset_valido, tamano_patron_encontrar)
-
-            logger_cagada.debug("el patron que inicia en %u siwe vivo %s(%u) contra %s(%u)" % (pos_pat_ref_inicio, bin(byte_actual_patron_ref), pos_pat_ref, bin(patron_encontrar_raw[offset_valido]), offset_valido))
             
             maskara_comparacion = maskara_ultimo_byte_patron_enc
-            if(offset_valido < tamano_patron_encontrar - 1):
+            if(offset_valido < ultimo_idx_patron_enc):
                 maskara_comparacion = 0xff
+
+            logger_cagada.debug("el patron que inicia en %u siwe vivo %s(%u) contra %s(%u)" % (pos_pat_ref_inicio, bin(byte_actual_patron_ref & maskara_comparacion), pos_pat_ref, bin(patron_encontrar_raw[offset_valido]), offset_valido))
+            
             logger_cagada.debug("en este cuadro %s" % bin(maskara_comparacion))
             if((byte_actual_patron_ref & maskara_comparacion) == patron_encontrar_raw[offset_valido]):
-                posiciones_tmp[pos_pat_ref_inicio] += 1
-                if(posiciones_tmp[pos_pat_ref_inicio] == tamano_patron_encontrar):
-                    logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u, tamanios %u %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref_inicio], tamano_patron_encontrar))
-                    matches_completos[pos_pat_ref_inicio] = True
-                    posiciones_a_borrar.append(pos_pat_ref_inicio)
+                if(offset_valido + 1 == tamano_patron_encontrar):
+                    logger_cagada.debug("knee deep ya no se buscara mas patron q inicia en %u, tamanio en bytes %u " % (pos_pat_ref_inicio, tamano_patron_encontrar))
+                    matches_completos[ pos_pat_ref_inicio ] = True
                     if(corto_circuito):
                         logger_cagada.debug("corto circuito activado asi q se sale")
                         break
-                logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref_inicio]))
+                else:
+                    assert (offset_valido + 1) < tamano_patron_encontrar, "como es posible, el offset es %u, cuando el tam del patron enc es %u" % (offset_valido + 1, tamano_patron_encontrar)
+                    posiciones_tmp.setdefault(pos_pat_ref + 8, []).append((pos_pat_ref_inicio, offset_valido + 1))
+                    logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref + 8][-1][1]))
             else:
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
-                posiciones_a_borrar.append(pos_pat_ref_inicio)
+                pass
             
         if(corto_circuito and matches_completos):
             break
         logger_cagada.debug("celso pina %s" % posiciones_tmp)
-        for pos_a_bor in posiciones_a_borrar:
-            logger_cagada.debug("baila con el rebelde %u" % pos_a_bor)
-            del posiciones_tmp[pos_a_bor]
         
         maskara_comparacion = maskara_ultimo_byte_patron_enc
         if(tamano_patron_encontrar > 1):
@@ -864,20 +863,25 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
         logger_cagada.debug("polka pelazon %s" % bin(maskara_comparacion))
         if((byte_actual_patron_ref & maskara_comparacion) == primer_byte_patron_enc):
             if(tamano_patron_encontrar == 1):
-                matches_completos[pos_pat_ref] = True
+                matches_completos[pos_pat_ref ] = True
                 if(corto_circuito):
+                    logger_cagada.debug("corto circuito activado asi q se sale con el 1er bit")
                     break
             else:
-                posiciones_tmp[pos_pat_ref] = 1
+                posiciones_tmp.setdefault(pos_pat_ref + 8, []).append((pos_pat_ref, 1))
                 logger_cagada.debug("se inicia cagada %s(%u) vs %s(%u)" % (bin(byte_actual_patron_ref), pos_pat_ref , bin(primer_byte_patron_enc), 0))
  
 
     if(nivel_log == logging.DEBUG):
-        for posicion, tam_match in posiciones_tmp.items():
-            posiciones[posicion] = tam_match
+        logger_cagada.debug("las posiciones tmp %s" % posiciones_tmp)
+        if(posiciones_tmp):
+            for _, saltos in posiciones_tmp.items():
+                for inicio_match, tam_match in saltos:
+                    if(inicio_match not in posiciones):
+                        posiciones[inicio_match] = tam_match
+                    if(tam_match > posiciones[inicio_match]):
+                        posiciones[inicio_match] = tam_match
 
-
-    
     for posicion in matches_completos.keys():
         posiciones[posicion] = tamano_patron_encontrar
 
@@ -911,6 +915,8 @@ def fibonazi_genera_palabras_patron(palabras, tam_palabra_a_idx_patron):
         tamano_palabra_anterior_1 = tamano_palabra_actual
 
     logger_cagada.debug("el tamano final %s" % tamano_palabra_actual)
+    logger_cagada.debug("los primeros patrones%s" % ([x.bin for x in palabras[0:14]]))
+    logger_cagada.debug("los mapeos de tamanos de palabras %s" % (tam_palabra_a_idx_patron[0:20]))
 
 def fibonazi_genera_sequencia_repeticiones(secuencia, generar_grande):
     secuencia.append(1)
@@ -959,6 +965,7 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
             return (2, False)
     
     idx_patron_tamano_coincide = tam_palabra_a_idx_patron[tam_patron]
+    logger_cagada.debug("el idx q l corresponde por tam %u" % idx_patron_tamano_coincide)
     patron_tamano_coincide = patrones_base[idx_patron_tamano_coincide]
 
     assert(len(patron_tamano_coincide) > 0)
@@ -1079,7 +1086,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
         logger_cagada.debug("buscando en inicio rapido %u" % separacion_primera_aparicion_y_donde_buscar)
         num_repeticiones = repeticiones_inicio_rapido[separacion_primera_aparicion_y_donde_buscar]
     
-    logger_cagada.debug("el num de repeticiones de %s en la pos %u es %u" % (BitArray(list(reversed(patron_referencia))), idx_patrones_base_donde_buscar, num_repeticiones))
+    logger_cagada.debug("el num de repeticiones de %s en la pos %u es %u" % (patron_referencia.bin, idx_patrones_base_donde_buscar, num_repeticiones))
 
     assert(num_repeticiones)
 
@@ -1090,6 +1097,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
             pegate = 2
         else:
             pegate = 1
+        logger_cagada.debug("validando q efectivamente el siwiente idx de donde aparece %u (%s) tenga %u repeticones" % (idx_primera_aparicion_patron + 1, patrones_base[idx_primera_aparicion_patron + 1].bin, pegate))
         fibonazi_compara_patrones(patrones_base[idx_primera_aparicion_patron + 1], patron_referencia, posiciones_patron, posiciones_match_completo, pegate=pegate, corto_circuito=False)
         assert((segunda_aparicion_doble and len(posiciones_match_completo) == 2) or (not segunda_aparicion_doble and len(posiciones_match_completo) == 1))
     
