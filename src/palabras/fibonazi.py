@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-#nivel_log = logging.DEBUG
+nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -812,13 +812,15 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     primer_byte_patron_enc = patron_encontrar_raw[0]
     
     sobrante_patron_enc = len(patron_encontrar) % 8
-    logger_cagada.debug("sobrante de bitches %u" % (sobrante_patron_enc))
+    logger_cagada.debug("sobrante de bitches %u del total %u" % (sobrante_patron_enc, len(patron_encontrar)))
     maskara_ultimo_byte_patron_enc = 0xff >> (8 - sobrante_patron_enc) if sobrante_patron_enc else 0xff
     ultimo_idx_patron_enc = tamano_patron_encontrar - 1
     lomote_iteracion = tamano_patron_referencia - sobrante_patron_enc
     if(sobrante_patron_enc):
         logger_cagada.debug("hay sobrante")
         lomote_iteracion += 1
+    else:
+        lomote_iteracion = tamano_patron_referencia - 7
     
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
     for pos_pat_ref in range(0, lomote_iteracion):
