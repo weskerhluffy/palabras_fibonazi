@@ -812,10 +812,13 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     primer_byte_patron_enc = patron_encontrar_raw[0]
     
     sobrante_patron_enc = len(patron_encontrar) % 8
-    maskara_ultimo_byte_patron_enc = 0xff >> (8 - sobrante_patron_enc)
+    maskara_ultimo_byte_patron_enc = 0xff >> (8 - sobrante_patron_enc) if sobrante_patron_enc else 0xff
     ultimo_idx_patron_enc = tamano_patron_encontrar - 1
+    lomote_iteracion = tamano_patron_referencia - sobrante_patron_enc
+    if(sobrante_patron_enc):
+        lomote_iteracion + 1
     
-    for pos_pat_ref in range(0, tamano_patron_referencia - sobrante_patron_enc + 1):
+    for pos_pat_ref in range(0, lomote_iteracion):
 
         byte = pos_pat_ref >> 3
         bit = pos_pat_ref & 7
