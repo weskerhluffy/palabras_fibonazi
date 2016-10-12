@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-#nivel_log = logging.DEBUG
+nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -564,9 +564,11 @@ class Bits(object):
             return ''
         startbyte = 0
         endbyte = self._datastore.bytelength - 1
-        b = array.array("Q", list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
+        b = bytearray(reversed(bytearray(self._datastore.getbyteslice(startbyte, endbyte + 1))))
         logger_cagada.debug("la cadena revertida %s" % b)
         try:
+            c = binascii.hexlify(b)
+            logger_cagada.debug("if i cut %s"%c)
             c = "{:0{}b}".format(int(binascii.hexlify(b), 16), 8 * len(b))
         except TypeError:
             c = "{0:0{1}b}".format(int(binascii.hexlify(str(b)), 16), 8 * len(b))
@@ -821,7 +823,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
         logger_cagada.debug("hay sobrante")
         lomote_iteracion += 1
     else:
-        lomote_iteracion = tamano_patron_referencia - 64
+        lomote_iteracion = tamano_patron_referencia - 63
     
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
     for pos_pat_ref in range(0, lomote_iteracion):
@@ -1157,13 +1159,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
- #   a = BitArray(bin="111011111111110")
- #   a += BitArray(bin="10101000001")
+#    a = BitArray(bin="111011111111110")
+#    a += BitArray(bin="10101000001")
+   
+#    b = BitArray(bin="11100101")
+#    b += BitArray(bin="101")
+   
+#    logger_cagada.debug("la mierda %s" % b)
     
- #   b = BitArray(bin="11100101")
- #   b += BitArray(bin="101")
-    
- #   logger_cagada.debug("la mierda %s" % b)
+#    sys.exit()
     
 
     fibonazi_genera_palabras_patron(palabras_patron, tam_palabra_a_idx_patron)
