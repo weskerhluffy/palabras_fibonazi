@@ -83,7 +83,7 @@ class ConstByteStore(object):
         if offset is None:
             offset = 0
         if bitlength is None:
-            bitlength = 8 * len(data) - offset
+            bitlength = 64 * len(data) - offset
         self.offset = offset
         logger_cagada.debug("El offset al crear %s" % self.offset)
         self.bitlength = bitlength
@@ -95,7 +95,7 @@ class ConstByteStore(object):
         logger_cagada.debug("el patron es %s" % self._rawarray)
         logger_cagada.debug("q vergas es offset %s" % (self.offset))
         logger_cagada.debug("la pos deseada es %s" % (pos))
-        byte, bit = divmod(pos, 8)
+        byte, bit = divmod(pos, 64)
         return bool(self._rawarray[byte] & (1 << bit))
 
     def getbyte(self, pos):
@@ -109,7 +109,7 @@ class ConstByteStore(object):
     def bytelength(self):
         if not self.bitlength:
             return 0
-        eb = (self.bitlength - 1) // 8
+        eb = (self.bitlength - 1) // 64
         return eb + 1
 
     def __copy__(self):
@@ -129,30 +129,30 @@ class ByteStore(ConstByteStore):
 
 
 def offsetcopy(s, newoffset):
-    assert 0 <= newoffset < 8
+    assert 0 <= newoffset < 64
     if not s.bitlength:
         return copy.copy(s)
     else:
-        newdata = []
+        newdata = array.array("Q")
         d = s._rawarray
 #        if newoffset <= restante_a_la_der:
         shiftleft = newoffset
-        bits_libres_a_la_izq = 8 - s.bitlength % 8
-        if(bits_libres_a_la_izq == 8):
+        bits_libres_a_la_izq = 64 - s.bitlength % 64
+        if(bits_libres_a_la_izq == 64):
             bits_libres_a_la_izq = 0
         logger_cagada.debug("los bitchs libres a la izq %u" % (bits_libres_a_la_izq))
         logger_cagada.debug("el byte original inicial %s con bytelen %u" % (bin(s.getbyte(0)), s.bytelength))
-        newdata.append(s.getbyte(0) << (shiftleft) & 0xff)
+        newdata.append(s.getbyte(0) << (shiftleft) & 0xffffffffffffffff)
         logger_cagada.debug("se añadio al inicio %s" % (bin(newdata[-1])))
         for x in range(1, s.bytelength):
-            newdata.append(((d[x] << shiftleft) & 0xff) + \
-                           (d[x - 1] >> (8 - shiftleft)))
+            newdata.append(((d[x] << shiftleft) & 0xffffffffffffffff) + \
+                           (d[x - 1] >> (64 - shiftleft)))
             logger_cagada.debug("añadiendo byte %s de byte orig %u" % (bin(newdata[-1]), x))
         if shiftleft > bits_libres_a_la_izq:
-            offset_ultimo_byte = ((s.bitlength % 8) - (shiftleft - bits_libres_a_la_izq))
+            offset_ultimo_byte = ((s.bitlength % 64) - (shiftleft - bits_libres_a_la_izq))
             if(offset_ultimo_byte < 0):
-                offset_ultimo_byte = 8 - shiftleft
-            newdata.append(d[-1] >> offset_ultimo_byte & 0xff)
+                offset_ultimo_byte = 64 - shiftleft
+            newdata.append(d[-1] >> offset_ultimo_byte & 0xffffffffffffffff)
             logger_cagada.debug("se añadio al final (por salir una cabecilla) %s" % (bin(newdata[-1])))
         
 #        else:  # newoffset > s._offset % 8
@@ -170,7 +170,7 @@ def offsetcopy(s, newoffset):
 #        bits_in_last_byte = newoffset - restante_a_la_der if restante_a_la_der < newoffset else 0
 #        if bits_in_last_byte:
 #            newdata.append((d[s.bytelength - 1] << (8 - shiftright)) & 0xff)
-        new_s = ByteStore(bytearray(newdata), s.bitlength, 0)
+        new_s = ByteStore(newdata, s.bitlength, 0)
         return new_s
 
 
@@ -361,10 +361,11 @@ class Bits(object):
             return
         if not kwargs:
             if length is not None and length != 0:
-                data = bytearray((length + 7) // 8)
+                num_words=(length + 63) // 64
+                data = array.array("Q") 
                 self._setbytes_unsafe(data, length, 0)
                 return
-            self._setbytes_unsafe(bytearray(0), 0, 0)
+            self._setbytes_unsafe(array.array("Q"), 0, 0)
             return
         k, v = kwargs.popitem()
         try:
@@ -407,9 +408,9 @@ class Bits(object):
         logger_cagada.debug("appendeando pumpkin hea %s" % (",".join(bin(x) + " (" + hex(x) + ")" for x in parte_izq_ds._rawarray)))
         logger_cagada.debug("we wont pre offset %u bitchlen %u" % (parte_izq_ds.offset, parte_izq_ds.bitlength))
         
-        if(parte_der_ds.bitlength % 8):
-            store1 = offsetcopy(parte_izq_ds, parte_der_ds.bitlength % 8)
-            logger_cagada.debug("your drees %s se recorrio %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store1._rawarray), parte_der_ds.bitlength % 8))
+        if(parte_der_ds.bitlength % 64):
+            store1 = offsetcopy(parte_izq_ds, parte_der_ds.bitlength % 64)
+            logger_cagada.debug("your drees %s se recorrio %u" % (",".join(bin(x) + " (" + hex(x) + ")" for x in store1._rawarray), parte_der_ds.bitlength % 64))
             logger_cagada.debug("uniendo ultimo bit de der %s con primer bit de izq %s" % (bin(parte_der_ds._rawarray[-1]), bin(store1._rawarray[0])))
             parte_der_ds._rawarray[-1] |= store1._rawarray[0]
     #            joinval = (self._rawarray.pop() & (255 ^ (255 >> store.offset)) | 
@@ -543,27 +544,28 @@ class Bits(object):
 
     def _setbin_unsafe(self, binstring):
         length = len(binstring)
-        boundary = ((length + 7) // 8) * 8
+        boundary = ((length + 63) // 64) * 64
         padded_binstring = '0' * (boundary - length) + binstring \
                            if len(binstring) < boundary else binstring
         logger_cagada.debug("evil all of the t %s" % padded_binstring)
         tam_padded_str = len(padded_binstring)
         logger_cagada.debug("primer cadena para el bitch %s " % padded_binstring[8:16])
-        assert not tam_padded_str % 8
+        assert not tam_padded_str % 64
         try:
-            bytelist = [int(padded_binstring[x - 8 :x], 2)
-                        for x in xrange(len(padded_binstring) , 0, -8)]
+            bytelist = [int(padded_binstring[x - 64 :x], 2)
+                        for x in xrange(len(padded_binstring) , 0, -64)]
         except ValueError:
             raise CreationError("Invalid character in bin initialiser {0}.", binstring)
         logger_cagada.debug("la lista de bytes %s" % bytelist)
-        self._setbytes_unsafe(bytearray(bytelist), length, 0)
+        word_array=array.array("Q",bytelist)
+        self._setbytes_unsafe(word_array, length, 0)
 
     def _readbin(self, length, start):
         if not length:
             return ''
         startbyte = 0
         endbyte = self._datastore.bytelength - 1
-        b = bytearray(list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
+        b = array.array("Q",list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
         logger_cagada.debug("la cadena revertida %s" % b)
         try:
             c = "{:0{}b}".format(int(binascii.hexlify(b), 16), 8 * len(b))
@@ -811,16 +813,16 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     
     primer_byte_patron_enc = patron_encontrar_raw[0]
     
-    sobrante_patron_enc = len(patron_encontrar) % 8
+    sobrante_patron_enc = len(patron_encontrar) % 64
     logger_cagada.debug("sobrante de bitches %u del total %u" % (sobrante_patron_enc, len(patron_encontrar)))
-    maskara_ultimo_byte_patron_enc = 0xff >> (8 - sobrante_patron_enc) if sobrante_patron_enc else 0xff
+    maskara_ultimo_byte_patron_enc = 0xffffffffffffffff >> (64 - sobrante_patron_enc) if sobrante_patron_enc else 0xffffffffffffffff
     ultimo_idx_patron_enc = tamano_patron_encontrar - 1
     lomote_iteracion = tamano_patron_referencia - sobrante_patron_enc
     if(sobrante_patron_enc):
         logger_cagada.debug("hay sobrante")
         lomote_iteracion += 1
     else:
-        lomote_iteracion = tamano_patron_referencia - 7
+        lomote_iteracion = tamano_patron_referencia - 64
     
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
     for pos_pat_ref in range(0, lomote_iteracion):
@@ -830,8 +832,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
         
         byte_actual_patron_ref = (patron_referencia_raw[byte] >> bit) 
         if(byte < len(patron_referencia_raw) - 1):
-            logger_cagada.debug("es q cual %s de %s" % (bin((patron_referencia_raw[byte + 1] << (8 - bit)) & 0xff), bin(patron_referencia_raw[byte + 1])))
-            byte_actual_patron_ref |= ((patron_referencia_raw[byte + 1] << (8 - bit)) & 0xff)
+            logger_cagada.debug("es q cual %s de %s" % (bin((patron_referencia_raw[byte + 1] << (64 - bit)) & 0xffffffffffffffff), bin(patron_referencia_raw[byte + 1])))
+            byte_actual_patron_ref |= ((patron_referencia_raw[byte + 1] << (64 - bit)) & 0xffffffffffffffff)
 
         logger_cagada.debug("i aora solo tengo %s con byte %u y bit %u de %s" % (bin(byte_actual_patron_ref), byte, bit, bin(patron_referencia_raw[byte])))
         
@@ -841,7 +843,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
             
             maskara_comparacion = maskara_ultimo_byte_patron_enc
             if(offset_valido < ultimo_idx_patron_enc):
-                maskara_comparacion = 0xff
+                maskara_comparacion = 0xffffffffffffffff
 
             logger_cagada.debug("el patron que inicia en %u siwe vivo %s(%u) contra %s(%u)" % (pos_pat_ref_inicio, bin(byte_actual_patron_ref & maskara_comparacion), pos_pat_ref, bin(patron_encontrar_raw[offset_valido]), offset_valido))
             
@@ -855,8 +857,8 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
                         break
                 else:
                     assert (offset_valido + 1) < tamano_patron_encontrar, "como es posible, el offset es %u, cuando el tam del patron enc es %u" % (offset_valido + 1, tamano_patron_encontrar)
-                    posiciones_tmp.setdefault(pos_pat_ref + 8, []).append((pos_pat_ref_inicio, offset_valido + 1))
-                    logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref + 8][-1][1]))
+                    posiciones_tmp.setdefault(pos_pat_ref + 64, []).append((pos_pat_ref_inicio, offset_valido + 1))
+                    logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref + 64][-1][1]))
             else:
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
                 pass
@@ -867,7 +869,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
         
         maskara_comparacion = maskara_ultimo_byte_patron_enc
         if(tamano_patron_encontrar > 1):
-            maskara_comparacion = 0xff
+            maskara_comparacion = 0xffffffffffffffff
         logger_cagada.debug("polka pelazon %s" % bin(maskara_comparacion))
         if((byte_actual_patron_ref & maskara_comparacion) == primer_byte_patron_enc):
             if(tamano_patron_encontrar == 1):
@@ -876,7 +878,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
                     logger_cagada.debug("corto circuito activado asi q se sale con el 1er bit")
                     break
             else:
-                posiciones_tmp.setdefault(pos_pat_ref + 8, []).append((pos_pat_ref, 1))
+                posiciones_tmp.setdefault(pos_pat_ref + 64, []).append((pos_pat_ref, 1))
                 logger_cagada.debug("se inicia cagada %s(%u) vs %s(%u)" % (bin(byte_actual_patron_ref), pos_pat_ref , bin(primer_byte_patron_enc), 0))
  
 
