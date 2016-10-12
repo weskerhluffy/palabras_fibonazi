@@ -15,7 +15,7 @@ import sys
 
 logger_cagada = None
 nivel_log = logging.ERROR
-nivel_log = logging.DEBUG
+#nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -361,7 +361,7 @@ class Bits(object):
             return
         if not kwargs:
             if length is not None and length != 0:
-                num_words=(length + 63) // 64
+                num_words = (length + 63) // 64
                 data = array.array("Q") 
                 self._setbytes_unsafe(data, length, 0)
                 return
@@ -504,8 +504,7 @@ class Bits(object):
 
     def _assertsanity(self):
         assert self.len >= 0
-        assert 0 <= self._offset, "offset={0}".format(self._offset)
-        assert (self.len + self._offset + 7) // 8 == self._datastore.bytelength + self._datastore.byteoffset
+        assert (self.len + 63) // 64 == self._datastore.bytelength, "el calculo %u (len %u) contra lo q es %u" % ((self.len + 63) // 64, self.len , self._datastore.bytelength)
         return True
 
     def _setbytes_safe(self, data, length=None, offset=0):
@@ -557,7 +556,7 @@ class Bits(object):
         except ValueError:
             raise CreationError("Invalid character in bin initialiser {0}.", binstring)
         logger_cagada.debug("la lista de bytes %s" % bytelist)
-        word_array=array.array("Q",bytelist)
+        word_array = array.array("Q", bytelist)
         self._setbytes_unsafe(word_array, length, 0)
 
     def _readbin(self, length, start):
@@ -565,7 +564,7 @@ class Bits(object):
             return ''
         startbyte = 0
         endbyte = self._datastore.bytelength - 1
-        b = array.array("Q",list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
+        b = array.array("Q", list(reversed(self._datastore.getbyteslice(startbyte, endbyte + 1))))
         logger_cagada.debug("la cadena revertida %s" % b)
         try:
             c = "{:0{}b}".format(int(binascii.hexlify(b), 16), 8 * len(b))
@@ -827,9 +826,10 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
     for pos_pat_ref in range(0, lomote_iteracion):
 
-        byte = pos_pat_ref >> 3
-        bit = pos_pat_ref & 7
+        byte = pos_pat_ref >> 6
+        bit = pos_pat_ref & 63
         
+        logger_cagada.debug("el byte %u el bit %u de %u" % (byte, bit, pos_pat_ref))
         byte_actual_patron_ref = (patron_referencia_raw[byte] >> bit) 
         if(byte < len(patron_referencia_raw) - 1):
             logger_cagada.debug("es q cual %s de %s" % (bin((patron_referencia_raw[byte + 1] << (64 - bit)) & 0xffffffffffffffff), bin(patron_referencia_raw[byte + 1])))
