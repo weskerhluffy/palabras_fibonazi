@@ -174,88 +174,6 @@ def offsetcopy(s, newoffset):
         return new_s
 
 
-def equal(a, b):
-    a_bitlength = a.bitlength
-    b_bitlength = b.bitlength
-    if a_bitlength != b_bitlength:
-        return False
-    if not a_bitlength:
-        assert b_bitlength == 0
-        return True
-    if (a.offset % 8) > (b.offset % 8):
-        a, b = b, a
-    a_bitoff = a.offset % 8
-    b_bitoff = b.offset % 8
-    a_byteoffset = a.byteoffset
-    b_byteoffset = b.byteoffset
-    a_bytelength = a.bytelength
-    b_bytelength = b.bytelength
-    da = a._rawarray
-    db = b._rawarray
-
-    if da is db and a.offset == b.offset:
-        return True
-
-    if a_bitoff == b_bitoff:
-        bits_spare_in_last_byte = 8 - (a_bitoff + a_bitlength) % 8
-        if bits_spare_in_last_byte == 8:
-            bits_spare_in_last_byte = 0
-        if a_bytelength == 1:
-            a_val = ((da[a_byteoffset] << a_bitoff) & 0xff) >> (8 - a_bitlength)
-            b_val = ((db[b_byteoffset] << b_bitoff) & 0xff) >> (8 - b_bitlength)
-            return a_val == b_val
-        if da[a_byteoffset] & (0xff >> a_bitoff) != db[b_byteoffset] & (0xff >> b_bitoff):
-            return False
-        b_a_offset = b_byteoffset - a_byteoffset
-        for x in range(1 + a_byteoffset, a_byteoffset + a_bytelength - 1):
-            if da[x] != db[b_a_offset + x]:
-                return False
-        return (da[a_byteoffset + a_bytelength - 1] >> bits_spare_in_last_byte == 
-                db[b_byteoffset + b_bytelength - 1] >> bits_spare_in_last_byte)
-
-    assert a_bitoff != b_bitoff
-    shift = b_bitoff - a_bitoff
-    if b_bytelength == 1:
-        assert a_bytelength == 1
-        a_val = ((da[a_byteoffset] << a_bitoff) & 0xff) >> (8 - a_bitlength)
-        b_val = ((db[b_byteoffset] << b_bitoff) & 0xff) >> (8 - b_bitlength)
-        return a_val == b_val
-    if a_bytelength == 1:
-        assert b_bytelength == 2
-        a_val = ((da[a_byteoffset] << a_bitoff) & 0xff) >> (8 - a_bitlength)
-        b_val = ((db[b_byteoffset] << 8) + db[b_byteoffset + 1]) << b_bitoff
-        b_val &= 0xffff
-        b_val >>= 16 - b_bitlength
-        return a_val == b_val
-
-    if (da[a_byteoffset] & (0xff >> a_bitoff)) >> shift != db[b_byteoffset] & (0xff >> b_bitoff):
-        return False
-    for x in range(1, b_bytelength - 1):
-        b_val = db[b_byteoffset + x]
-        a_val = ((da[a_byteoffset + x - 1] << 8) + da[a_byteoffset + x]) >> shift
-        a_val &= 0xff
-        if a_val != b_val:
-            return False
-
-    final_b_bits = (b.offset + b_bitlength) % 8
-    if not final_b_bits:
-        final_b_bits = 8
-    b_val = db[b_byteoffset + b_bytelength - 1] >> (8 - final_b_bits)
-    final_a_bits = (a.offset + a_bitlength) % 8
-    if not final_a_bits:
-        final_a_bits = 8
-    if b.bytelength > a_bytelength:
-        assert b_bytelength == a_bytelength + 1
-        a_val = da[a_byteoffset + a_bytelength - 1] >> (8 - final_a_bits)
-        a_val &= 0xff >> (8 - final_b_bits)
-        return a_val == b_val
-    assert a_bytelength == b_bytelength
-    a_val = da[a_byteoffset + a_bytelength - 2] << 8
-    a_val += da[a_byteoffset + a_bytelength - 1]
-    a_val >>= (8 - final_a_bits)
-    a_val &= 0xff >> (8 - final_b_bits)
-    return a_val == b_val
-
 
 class MmapByteArray(object):
     pass
@@ -446,14 +364,6 @@ class Bits(object):
         return ''.join(('0x', self._readhex(length - bits_at_end, 0),
                         ', ', '0b',
                         self._readbin(bits_at_end, length - bits_at_end)))
-
-    def __eq__(self, bs):
-        try:
-            bs = Bits(bs)
-        except TypeError:
-            return False
-        return equal(self._datastore, bs._datastore)
-
 
     def _setauto(self, s, length, offset):
         if isinstance(s, Bits):
