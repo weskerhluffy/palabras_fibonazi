@@ -1047,7 +1047,7 @@ if __name__ == '__main__':
             patron_encontrar = BitArray(bin=linea.strip())
 
             num_repeticiones = fibonazi_main(patron_encontrar, palabras_patron, idx_a_buscar, secuencia_no_grande, secuencia_grande, secuencia_peke)
-            print("Case #%u %s" % (linea_idx / 2 + 1, (ctypes.c_long(num_repeticiones)).value))
+            print("Case %u: %s" % (linea_idx / 2 + 1, (ctypes.c_long(num_repeticiones)).value))
         linea_idx += 1
     
 
