@@ -782,7 +782,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
                     logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref + 64][-1][1]))
             else:
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
-                del secuencias_activas[pos_pat_ref] 
+                del secuencias_activas[pos_pat_ref_inicio] 
                 if(limitacion and pos_pat_ref_inicio >= limitacion and not secuencias_activas):
                     logger_cagada.debug("se aborta por que la seq q empieza en %u fallo y sobrepasa el limite %u" % (pos_pat_ref_inicio, limitacion))
                     break
