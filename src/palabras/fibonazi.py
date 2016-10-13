@@ -568,7 +568,7 @@ class Bits(object):
         logger_cagada.debug("la cadena revertida %s" % b)
         try:
             c = binascii.hexlify(b)
-            logger_cagada.debug("if i cut %s"%c)
+            logger_cagada.debug("if i cut %s" % c)
             c = "{:0{}b}".format(int(binascii.hexlify(b), 16), 8 * len(b))
         except TypeError:
             c = "{0:0{1}b}".format(int(binascii.hexlify(str(b)), 16), 8 * len(b))
@@ -793,7 +793,7 @@ def caca_ordena_dick_valor(dick):
     return sorted(dick.items(), key=lambda cosa: operator.itemgetter(cosa[1], cosa[0]))
 
 # @profile
-def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos, corto_circuito=True, pegate=0):
+def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, matches_completos, corto_circuito=True, pegate=0, limitacion=0):
     tamano_patron_referencia = 0
     tamano_patron_encontrar = 0
     posicion_coincidente = 0
@@ -827,6 +827,10 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
     for pos_pat_ref in range(0, lomote_iteracion):
+        
+        if(limitacion and pos_pat_ref > limitacion):
+            logger_cagada.debug("se aborta opr limitaciones pendejas %u" % limitacion)
+            break
 
         byte = pos_pat_ref >> 6
         bit = pos_pat_ref & 63
@@ -998,10 +1002,11 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
     logger_cagada.debug("posiciones originales %s" % posiciones_patron)
     logger_cagada.debug("matches completos %s" % posiciones_match_completo)
     
+    tam_componente_1 = len(patrones_base[idx_patron_tamano_coincide - 1])
+    
     if(tam_posiciones_match_completo):
         idx_patron_encontrado = idx_patron_tamano_coincide 
         
-        tam_componente_1 = len(patrones_base[idx_patron_tamano_coincide - 1])
         
         logger_cagada.debug("patron enc en base 0 %u" % idx_patron_encontrado)
         if(posiciones_match_completo_llave[0][0] >= 2):
@@ -1012,7 +1017,7 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
         posiciones_patron.clear()
         posiciones_match_completo.clear()
         
-        fibonazi_compara_patrones(patron_base_1, patron_referencia , posiciones_patron, posiciones_match_completo)
+        fibonazi_compara_patrones(patron_base_1, patron_referencia , posiciones_patron, posiciones_match_completo, limitacion=tam_componente_1)
         
         tam_posiciones_match_completo = len(posiciones_match_completo)
         
@@ -1036,7 +1041,7 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
             posiciones_patron.clear()
             posiciones_match_completo.clear()
             
-            fibonazi_compara_patrones(patron_base_2, patron_referencia, posiciones_patron, posiciones_match_completo)
+            fibonazi_compara_patrones(patron_base_2, patron_referencia, posiciones_patron, posiciones_match_completo, limitacion=tam_patron)
             
             tam_posiciones_match_completo = len(posiciones_match_completo)
             
