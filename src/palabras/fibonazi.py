@@ -11,6 +11,7 @@ import operator
 import fileinput
 import argparse
 import sys
+import ctypes
 
 
 logger_cagada = None
@@ -1133,7 +1134,7 @@ if __name__ == '__main__':
             logger_cagada.debug("vinimos para liar %u %s" % (idx_a_buscar, patron_encontrar.bin))
 
             num_repeticiones = fibonazi_main(patron_encontrar, palabras_patron, idx_a_buscar, secuencia_no_grande, secuencia_grande, secuencia_peke)
-            print("Case #%u %u" % (linea_idx / 2 + 1, num_repeticiones))
+            print("Case #%u %u" % (linea_idx / 2 + 1, ctypes.c_long(num_repeticiones)))
         linea_idx += 1
     
 
