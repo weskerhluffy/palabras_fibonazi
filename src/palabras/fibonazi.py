@@ -798,9 +798,11 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     tamano_patron_encontrar = 0
     posicion_coincidente = 0
     patron_referencia_offset = 0
+    limitacion_caca = 0
     patron_referencia_raw = []
     patron_encontrar_raw = []
     posiciones_tmp = {}
+    secuencias_activas = {}
     
     patron_referencia_raw = patron_referencia._datastore._rawarray
     patron_encontrar_raw = patron_encontrar._datastore._rawarray
@@ -825,11 +827,14 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     else:
         lomote_iteracion = tamano_patron_referencia - 63
     
+    if(limitacion):
+        limitacion_caca = limitacion + len(patron_encontrar) - 1
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
+    logger_cagada.debug("limitacion de cagada %u" % limitacion_caca)
     for pos_pat_ref in range(0, lomote_iteracion):
         
-        if(limitacion and pos_pat_ref >= limitacion):
-            logger_cagada.debug("se aborta opr limitaciones pendejas %u" % limitacion)
+        if(limitacion_caca and pos_pat_ref >= limitacion_caca):
+            logger_cagada.debug("se aborta opr limitaciones pendejas %u" % limitacion_caca)
             break
 
         byte = pos_pat_ref >> 6
@@ -867,7 +872,10 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
                     logger_cagada.debug("la posicion %u si la izo, avanzo a %u" % (pos_pat_ref_inicio, posiciones_tmp[pos_pat_ref + 64][-1][1]))
             else:
                 logger_cagada.debug("la posicion %u no la izo" % pos_pat_ref_inicio)
-                pass
+                del secuencias_activas[pos_pat_ref] 
+                if(limitacion and pos_pat_ref_inicio >= limitacion and not secuencias_activas):
+                    logger_cagada.debug("se aborta por que la seq q empieza en %u fallo y sobrepasa el limite %u" % (pos_pat_ref_inicio, limitacion))
+                    break
             
         if(corto_circuito and matches_completos):
             break
@@ -878,6 +886,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
             maskara_comparacion = 0xffffffffffffffff
         logger_cagada.debug("polka pelazon %s" % bin(maskara_comparacion))
         if((byte_actual_patron_ref & maskara_comparacion) == primer_byte_patron_enc):
+            secuencias_activas[pos_pat_ref] = True
             if(tamano_patron_encontrar == 1):
                 matches_completos[pos_pat_ref ] = True
                 if(corto_circuito):
@@ -886,6 +895,10 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
             else:
                 posiciones_tmp.setdefault(pos_pat_ref + 64, []).append((pos_pat_ref, 1))
                 logger_cagada.debug("se inicia cagada %s(%u) vs %s(%u)" % (bin(byte_actual_patron_ref), pos_pat_ref , bin(primer_byte_patron_enc), 0))
+        else:
+            if(limitacion and pos_pat_ref >= limitacion and not secuencias_activas):
+                logger_cagada.debug("se aborta por que la seq q se iba a empezar en %u fallo y sobrepasa el limite %u" % (pos_pat_ref, limitacion))
+                break
  
 
     if(nivel_log == logging.DEBUG):
