@@ -16,7 +16,7 @@ import ctypes
 
 logger_cagada = None
 nivel_log = logging.ERROR
-nivel_log = logging.DEBUG
+# nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -1019,8 +1019,14 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
     assert(separacion_primera_aparicion_y_donde_buscar >= 0)
     
     if(not segunda_aparicion_doble):
-        if(len (patron_referencia) == 2 and patron_referencia[0] == False and patron_referencia[1] == True):
+        if((len (patron_referencia) == 2 and patron_referencia[0] == False and patron_referencia[1] == True) or len(patron_referencia) == 1):
             logger_cagada.debug("buscando en inicio muuuy lento pos %u" % separacion_primera_aparicion_y_donde_buscar)
+            if(not patron_referencia[0]):
+                if(not idx_patrones_base_donde_buscar):
+                    return 1
+                if(idx_patrones_base_donde_buscar == 1):
+                    return 0
+                separacion_primera_aparicion_y_donde_buscar -= 2
             num_repeticiones = repeticiones_inicio_muy_lento[separacion_primera_aparicion_y_donde_buscar]
         else:
             logger_cagada.debug("buscando en inicio lento pos %u" % separacion_primera_aparicion_y_donde_buscar)
@@ -1116,6 +1122,7 @@ if __name__ == '__main__':
     fibonazi_genera_sequencia_repeticiones(secuencia_no_grande, 1)
     logger_cagada.debug("la seq no grande %s" % secuencia_no_grande)
     fibonazi_genera_sequencia_repeticiones(secuencia_peke, 0)
+    logger_cagada.debug("la seq pekeñajo %s" % secuencia_peke)
     
     for linea in sys.stdin:
         if(not linea.strip()):
