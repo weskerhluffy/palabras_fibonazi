@@ -828,7 +828,7 @@ def fibonazi_compara_patrones(patron_referencia, patron_encontrar, posiciones, m
     logger_cagada.debug("iterndo  asta %u" % (lomote_iteracion))
     for pos_pat_ref in range(0, lomote_iteracion):
         
-        if(limitacion and pos_pat_ref > limitacion):
+        if(limitacion and pos_pat_ref >= limitacion):
             logger_cagada.debug("se aborta opr limitaciones pendejas %u" % limitacion)
             break
 
@@ -1017,6 +1017,7 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
         posiciones_patron.clear()
         posiciones_match_completo.clear()
         
+        logger_cagada.debug("limitando buskeda a %u" % tam_componente_1)
         fibonazi_compara_patrones(patron_base_1, patron_referencia , posiciones_patron, posiciones_match_completo, limitacion=tam_componente_1)
         
         tam_posiciones_match_completo = len(posiciones_match_completo)
@@ -1041,7 +1042,8 @@ def fibonazi_encuentra_primera_aparicion_patron(patron_referencia, patrones_base
             posiciones_patron.clear()
             posiciones_match_completo.clear()
             
-            fibonazi_compara_patrones(patron_base_2, patron_referencia, posiciones_patron, posiciones_match_completo, limitacion=tam_patron)
+            logger_cagada.debug("limitando buskeda a %u" % len(patron_tamano_coincide))
+            fibonazi_compara_patrones(patron_base_2, patron_referencia, posiciones_patron, posiciones_match_completo, limitacion=len(patron_tamano_coincide))
             
             tam_posiciones_match_completo = len(posiciones_match_completo)
             
