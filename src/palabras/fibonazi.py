@@ -16,7 +16,7 @@ import ctypes
 
 logger_cagada = None
 nivel_log = logging.ERROR
-# nivel_log = logging.DEBUG
+#nivel_log = logging.DEBUG
 
 __version__ = "3.1.5"
 
@@ -1021,7 +1021,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
     if(not segunda_aparicion_doble):
         if((len (patron_referencia) == 2 and patron_referencia[0] == False and patron_referencia[1] == True) or len(patron_referencia) == 1):
             logger_cagada.debug("buscando en inicio muuuy lento pos %u" % separacion_primera_aparicion_y_donde_buscar)
-            if(not patron_referencia[0]):
+            if(not patron_referencia[0] and len(patron_referencia) == 1):
                 if(not idx_patrones_base_donde_buscar):
                     return 1
                 if(idx_patrones_base_donde_buscar == 1):
@@ -1035,7 +1035,7 @@ def fibonazi_main(patron_referencia, patrones_base, idx_patrones_base_donde_busc
         logger_cagada.debug("buscando en inicio rapido %u" % separacion_primera_aparicion_y_donde_buscar)
         num_repeticiones = repeticiones_inicio_rapido[separacion_primera_aparicion_y_donde_buscar]
     
-    logger_cagada.debug("el num de repeticiones de %s en la pos %u es %u" % (patron_referencia.bin, idx_patrones_base_donde_buscar, num_repeticiones))
+    logger_cagada.debug("el num de repeticiones de %s en la pos %u es %ld" % (patron_referencia.bin, idx_patrones_base_donde_buscar, num_repeticiones))
 
     assert(num_repeticiones)
 
